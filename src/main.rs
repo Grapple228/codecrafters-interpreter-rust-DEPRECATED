@@ -1,9 +1,17 @@
+mod token;
+mod scanner;
+
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 
+use scanner::ScannerBuilder;
+
 fn main() {
     let args: Vec<String> = env::args().collect();
+
+    //println!("{:?}", args);
+
     if args.len() < 3 {
         writeln!(io::stderr(), "Usage: {} tokenize <filename>", args[0]).unwrap();
         return;
@@ -22,11 +30,13 @@ fn main() {
                 String::new()
             });
 
-            // Uncomment this block to pass the first stage
-            if !file_contents.is_empty() {
-                panic!("Scanner not implemented");
-            } else {
-                println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
+            let mut scanner_builder = ScannerBuilder::new(file_contents);
+            scanner_builder.scan_tokens();
+
+            let scanner = scanner_builder.finalize();
+
+            for token in scanner.tokens.iter(){
+                println!("{}", token.to_string())
             }
         }
         _ => {
