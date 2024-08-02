@@ -96,7 +96,7 @@ impl Scanner{
     }
 
     fn char_at(&self, index: usize) -> char{
-        self.source.chars().nth(index).unwrap()
+        self.source.chars().nth(index).unwrap_or_default()
     }
 
     fn check_next(&mut self, expected: char) -> bool{
