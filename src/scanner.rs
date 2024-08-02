@@ -150,11 +150,11 @@ impl Scanner{
             }
             '<' => {
                 let check_next = self.check_next('=');
-                self.add_token(if check_next {TokenType::LESS_EQUAL} else {TokenType::EQUAL})
+                self.add_token(if check_next {TokenType::LESS_EQUAL} else {TokenType::LESS})
             }
             '>' => {
                 let check_next = self.check_next('=');
-                self.add_token(if check_next {TokenType::GREATER_EQUAL} else {TokenType::EQUAL})
+                self.add_token(if check_next {TokenType::GREATER_EQUAL} else {TokenType::GREATER})
             }
             '/' =>{
                 if self.check_next('/'){

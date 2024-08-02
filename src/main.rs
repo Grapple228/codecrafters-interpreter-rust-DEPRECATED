@@ -1,11 +1,9 @@
 mod token;
 mod scanner;
 
-use std::alloc::System;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
-use std::process::ExitCode;
 
 use scanner::Scanner;
 
