@@ -1,9 +1,11 @@
 mod token;
 mod scanner;
 
+use std::alloc::System;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::process::ExitCode;
 
 use scanner::Scanner;
 
@@ -30,23 +32,23 @@ fn main() {
                 String::new()
             });
 
+            let mut exit_code = 0;
+        
             let mut scanner = Scanner::new(file_contents);
-            let result = scanner.scan_tokens();
+            scanner.scan_tokens();
 
-            match result {
-                Ok(tokens) => {
-                    for token in tokens.iter(){
-                        println!("{}", token.to_string())
-                    }
+            if scanner.has_error{
+                for error in scanner.errors.iter(){
+                    eprintln!("{}", error)
                 }
-                Err(errors) => {
-                    for error in errors.iter(){
-                        println!("{}", error.to_string())
-                    }
-                }
+                exit_code = 65;
             }
 
-            
+            for token in scanner.tokens.iter(){
+                println!("{}", token.to_string())
+            }
+
+            std::process::exit(exit_code);
         }
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();

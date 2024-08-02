@@ -1,29 +1,56 @@
-use std::fmt::{Display, Formatter, Error as FmtError};
+use std::fmt::{Display, Error as FmtError, Formatter};
 
 use crate::token::{Token, TokenType};
 
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+
+lazy_static! {
+    static ref KEYWORDS: HashMap<&'static str, TokenType> = {
+        let mut m: HashMap<&'static str, TokenType> = HashMap::new();
+        m.insert("and",    TokenType::AND);
+        m.insert("class",  TokenType::CLASS);
+        m.insert("else",   TokenType::ELSE);
+        m.insert("false",  TokenType::FALSE);
+        m.insert("for",    TokenType::FOR);
+        m.insert("fun",    TokenType::FUN);
+        m.insert("if",     TokenType::IF);
+        m.insert("nil",    TokenType::NIL);
+        m.insert("or",     TokenType::OR);
+        m.insert("print",  TokenType::PRINT);
+        m.insert("return", TokenType::RETURN);
+        m.insert("super",  TokenType::SUPER);
+        m.insert("this",   TokenType::THIS);
+        m.insert("true",   TokenType::TRUE);
+        m.insert("var",    TokenType::VAR);
+        m.insert("while",  TokenType::WHILE);
+        m
+    };
+}
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum ScannerError{
-    UnexpectedToken(usize, String)
+    UnexpectedCharacter(usize, char),
+    UnterminatedString(usize),
 }
 
 impl Display for ScannerError {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
         match self {
-            Self::UnexpectedToken(line, token) => write!(f, "Token {} on line {} is unexpected!", token, line)
+            Self::UnexpectedCharacter(line, character) => write!(f, "[line {}] Error: Unexpected character: {}", line, character),
+            Self::UnterminatedString(line) => write!(f, "[line {}] Error: Unterminated string", line),            
         }
     }
 }
 
 pub struct Scanner{
     source: String,
-    pub tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: usize,
-    has_error: bool,
-    errors: Vec<ScannerError>
+    pub tokens: Vec<Token>,
+    pub errors: Vec<ScannerError>,
+    pub has_error: bool
 }
 
 impl Scanner{
@@ -31,12 +58,17 @@ impl Scanner{
         Scanner{
             current: 0,
             source,
-            tokens: Vec::new(),
             line: 1,
             start: 0,
+            errors: Vec::new(),
+            tokens: Vec::new(),
             has_error: false,
-            errors: Vec::new()
         }
+    }
+
+    fn error(&mut self, error: ScannerError){
+        self.has_error = true;
+        self.errors.push(error);
     }
 
     fn is_end(&self) -> bool {
@@ -80,7 +112,7 @@ impl Scanner{
         true
     }
 
-    pub fn scan_tokens(&mut self) -> Result<&Vec<Token>, &Vec<ScannerError>>{
+    pub fn scan_tokens(&mut self) {
         while !self.is_end() {
             self.start = self.current;
             self.scan_token();
@@ -92,12 +124,6 @@ impl Scanner{
             line: self.line,
             literal: String::new()
         });
-
-        if self.has_error{
-            Result::Err(&self.errors)
-        } else{
-            Result::Ok(&self.tokens)
-        }       
     }
 
     fn scan_token(&mut self) {
@@ -148,16 +174,24 @@ impl Scanner{
                 if any.is_digit(10){
                     self.number();
                 }
+                else if self.is_alpha(c){
+                    self.identifier();
+                }
                 else{
-                    self.error(ScannerError::UnexpectedToken(self.line, c.to_string()))
+                    self.error(ScannerError::UnexpectedCharacter(self.line, c));
                 }
             }
         }
     }
 
-    fn error(&mut self, error: ScannerError){
-        self.has_error = true;
-        self.errors.push(error);
+    fn is_alpha(&self, c: char) -> bool {
+        c >= 'a' && c <= 'z' ||
+        c >= 'A' && c <= 'Z' ||
+        c == '_'
+    }
+
+    fn is_alpha_numeric(&self, c: char) -> bool {
+        self.is_alpha(c) || c.is_digit(10)
     }
 
     fn peek(&self) -> char{
@@ -174,6 +208,14 @@ impl Scanner{
 
     fn substring(&self, start: usize, end: usize) -> String{
         self.source.chars().skip(start).take(end-start).collect()
+    }
+
+    fn identifier(&mut self){
+        while self.is_alpha_numeric(self.peek()) {
+            self.advance();
+        }
+
+        self.add_token(TokenType::IDENTIFIER)
     }
 
     fn number(&mut self){
@@ -200,7 +242,7 @@ impl Scanner{
         }
         
         if self.is_end(){
-            panic!("Unterminated string!")
+            self.error(ScannerError::UnterminatedString(self.line));
         }
 
         self.advance();
