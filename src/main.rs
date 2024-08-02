@@ -5,7 +5,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 
-use scanner::ScannerBuilder;
+use scanner::Scanner;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -30,14 +30,23 @@ fn main() {
                 String::new()
             });
 
-            let mut scanner_builder = ScannerBuilder::new(file_contents);
-            scanner_builder.scan_tokens();
+            let mut scanner = Scanner::new(file_contents);
+            let result = scanner.scan_tokens();
 
-            let scanner = scanner_builder.finalize();
-
-            for token in scanner.tokens.iter(){
-                println!("{}", token.to_string())
+            match result {
+                Ok(tokens) => {
+                    for token in tokens.iter(){
+                        println!("{}", token.to_string())
+                    }
+                }
+                Err(errors) => {
+                    for error in errors.iter(){
+                        println!("{}", error.to_string())
+                    }
+                }
             }
+
+            
         }
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();

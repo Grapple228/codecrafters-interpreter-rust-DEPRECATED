@@ -1,30 +1,46 @@
+use std::fmt::{Display, Formatter, Error as FmtError};
+
 use crate::token::{Token, TokenType};
+
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum ScannerError{
+    UnexpectedToken(usize, String)
+}
+
+impl Display for ScannerError {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
+        match self {
+            Self::UnexpectedToken(line, token) => write!(f, "Token {} on line {} is unexpected!", token, line)
+        }
+    }
+}
 
 pub struct Scanner{
     source: String,
-    pub tokens: Vec<Token>
-}
-
-
-pub struct ScannerBuilder{
-    scanner: Scanner,
+    pub tokens: Vec<Token>,
     start: usize,
     current: usize,
-    line: usize
+    line: usize,
+    has_error: bool,
+    errors: Vec<ScannerError>
 }
 
-impl ScannerBuilder{
-    pub fn new(source: String) -> ScannerBuilder {
-        ScannerBuilder{
+impl Scanner{
+    pub fn new(source: String) -> Scanner {
+        Scanner{
             current: 0,
-            scanner: Scanner::new(source),
+            source,
+            tokens: Vec::new(),
             line: 1,
-            start: 0
+            start: 0,
+            has_error: false,
+            errors: Vec::new()
         }
     }
 
-    pub fn finalize(self) -> Scanner{
-        self.scanner
+    fn is_end(&self) -> bool {
+        self.current >= self.source.len()
     }
 
     fn advance(&mut self) -> char{
@@ -38,14 +54,9 @@ impl ScannerBuilder{
     }
 
     fn add_token_with_value(&mut self, token_type: TokenType, literal: String) {
-        //println!("start {} end {}", self.start, self.current);
         let text: String = self.substring(self.start, self.current);
-        //println!("{}", text);
-        self.scanner.tokens.push(Token { token_type, lexeme: text, literal, line: self.line })
-    }
 
-    fn is_end(&self) -> bool {
-        self.scanner.is_end(self.current)
+        self.tokens.push(Token { token_type, lexeme: text, literal, line: self.line })
     }
 
     fn get_current(&self) -> char{
@@ -53,7 +64,7 @@ impl ScannerBuilder{
     }
 
     fn char_at(&self, index: usize) -> char{
-        self.scanner.source.chars().nth(index).unwrap()
+        self.source.chars().nth(index).unwrap()
     }
 
     fn check_next(&mut self, expected: char) -> bool{
@@ -69,18 +80,24 @@ impl ScannerBuilder{
         true
     }
 
-    pub fn scan_tokens(&mut self){
+    pub fn scan_tokens(&mut self) -> Result<&Vec<Token>, &Vec<ScannerError>>{
         while !self.is_end() {
             self.start = self.current;
             self.scan_token();
         }
         
-        self.scanner.tokens.push(Token{
+        self.tokens.push(Token{
             token_type: TokenType::EOF,
             lexeme: String::new(),
             line: self.line,
             literal: String::new()
-        })
+        });
+
+        if self.has_error{
+            Result::Err(&self.errors)
+        } else{
+            Result::Ok(&self.tokens)
+        }       
     }
 
     fn scan_token(&mut self) {
@@ -132,10 +149,15 @@ impl ScannerBuilder{
                     self.number();
                 }
                 else{
-                    panic!("Unexpected token!")
+                    self.error(ScannerError::UnexpectedToken(self.line, c.to_string()))
                 }
             }
         }
+    }
+
+    fn error(&mut self, error: ScannerError){
+        self.has_error = true;
+        self.errors.push(error);
     }
 
     fn peek(&self) -> char{
@@ -144,14 +166,14 @@ impl ScannerBuilder{
     }
 
     fn peek_next(&self) -> char{
-        if self.current + 1 >= self.scanner.source.len() {
+        if self.current + 1 >= self.source.len() {
             return '\0';
         }
         self.char_at(self.current + 1)
     }
 
     fn substring(&self, start: usize, end: usize) -> String{
-        self.scanner.source.chars().skip(start).take(end-start).collect()
+        self.source.chars().skip(start).take(end-start).collect()
     }
 
     fn number(&mut self){
@@ -185,17 +207,5 @@ impl ScannerBuilder{
 
         let value = self.substring(self.start + 1, self.current - 1);
         self.add_token_with_value(TokenType::STRING, value);
-    }
-}
-
-impl Scanner {
-    pub fn new(source: String) -> Scanner {
-        Scanner{
-            source, tokens: Vec::new()
-        }
-    }
-
-    fn is_end(&self, current: usize) -> bool {
-        current >= self.source.len()
     }
 }
