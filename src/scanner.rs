@@ -36,19 +36,65 @@ pub struct Scanner{
     pub has_error: bool
 }
 
-
-
 impl Scanner{
     pub fn new(source: String) -> Scanner {
         Scanner{
-            current: 0,
             source,
+            current: 0,
             line: 1,
             start: 0,
+            has_error: false,
             errors: Vec::new(),
             tokens: Vec::new(),
-            has_error: false,
         }
+    }
+
+    fn is_end(&self) -> bool {
+        self.current >= self.source.len()
+    }
+
+    fn advance(&mut self) -> char{
+        let c = self.source.char_at(self.current);
+        self.current+=1;
+        c
+    }
+
+    fn get_current_char(&self) -> char{
+        self.source.char_at(self.current)
+    }
+
+    fn peek(&self) -> char{
+        if self.is_end() {return '\0';}
+        self.get_current_char()
+    }
+
+    fn peek_next(&self) -> char{
+        if self.current + 1 >= self.source.len() {
+            return '\0';
+        }
+        self.source.char_at(self.current + 1)
+    }
+
+    fn check_next(&mut self, expected: char) -> bool{
+        if self.is_end() {
+            return false;
+        }
+
+        if self.get_current_char() != expected{
+            return false;
+        }
+
+        self.current+=1;
+        true
+    }
+    
+    fn get_value(&self) -> String{
+        self.source.substring(self.start, self.current)
+    }
+
+    fn error(&mut self, error: ScannerError){
+        self.has_error = true;
+        self.errors.push(error);
     }
 
     pub fn add_token(&mut self, token_type: TokenType) {
@@ -56,7 +102,7 @@ impl Scanner{
     }
 
     fn add_token_with_value(&mut self, token_type: TokenType, literal: Data) {
-        let text: String = self.source.substring(self.start, self.current);
+        let text: String = self.get_value();
 
         self.tokens.push(Token { token_type, lexeme: text, literal, line: self.line})
     }
@@ -67,12 +113,7 @@ impl Scanner{
             self.scan_token();
         }
         
-        self.tokens.push(Token{
-            token_type: TokenType::Eof,
-            lexeme: String::new(),
-            line: self.line,
-            literal: Data::Null
-        });
+        self.tokens.push(Token::eof(self.line));
     }
 
     fn scan_token(&mut self) {
@@ -133,60 +174,21 @@ impl Scanner{
         }
     }
 
-    fn is_end(&self) -> bool {
-        self.current >= self.source.len()
-    }
-
-    fn advance(&mut self) -> char{
-        let c = self.source.char_at(self.current);
-        self.current+=1;
-        c
-    }
-
-    fn peek(&self) -> char{
-        if self.is_end() {return '\0';}
-        self.get_current()
-    }
-
-    fn peek_next(&self) -> char{
-        if self.current + 1 >= self.source.len() {
-            return '\0';
-        }
-        self.source.char_at(self.current + 1)
-    }
-
-    fn get_current(&self) -> char{
-        self.source.char_at(self.current)
-    }
-
-    fn check_next(&mut self, expected: char) -> bool{
-        if self.is_end() {
-            return false;
-        }
-
-        if self.get_current() != expected{
-            return false;
-        }
-
-        self.current+=1;
-        true
-    }
-
-    fn error(&mut self, error: ScannerError){
-        self.has_error = true;
-        self.errors.push(error);
-    }
 
     fn identifier(&mut self){
         while self.peek().is_alpha_numeric() {
             self.advance();
-
         }
 
-        let a = String::new();
-        a.substring(1, 3);
-
-        self.add_token(TokenType::Identifier)
+        let value = self.get_value();
+        
+        match KEYWORDS.get(value.as_str()) {
+            Some(token_type) => 
+            {
+                self.add_token(token_type.clone())
+            },
+            None => self.add_token(TokenType::Identifier)
+        }        
     }
 
     fn number(&mut self){
@@ -201,7 +203,7 @@ impl Scanner{
             }
         }
 
-        let value = self.source.substring(self.start, self.current);
+        let value = self.get_value();
         let literal = Data::Number(value.parse().unwrap_or_default());
 
         self.add_token_with_value(TokenType::Number, literal);

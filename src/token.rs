@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TokenType {
     // Single-character tokens.
   LeftParen, RightParen, LeftBrace, RightBrace,
@@ -98,6 +98,15 @@ pub struct Token {
 }
 
 impl Token {
+    pub fn eof(line: usize) -> Token{
+        Token{
+            token_type: TokenType::Eof,
+            lexeme: String::new(),
+            line,
+            literal: Data::Null
+        }
+    }
+
     pub fn to_string(&self) -> String {
 
         format!("{} {} {}", self.token_type.as_str(), self.lexeme,self.literal)
