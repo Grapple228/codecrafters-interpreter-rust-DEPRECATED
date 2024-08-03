@@ -190,14 +190,11 @@ impl Scanner{
     }
 
     fn number(&mut self){
-        let mut is_decimal = false;
-
         while self.peek().is_digit(10) {
             self.advance();
         }
 
         if self.peek() == '.' && self.peek_next().is_digit(10) {
-            is_decimal = true;
             self.advance();
             while self.peek().is_digit(10) {
                 self.advance();
@@ -205,12 +202,9 @@ impl Scanner{
         }
 
         let value = self.source.substring(self.start, self.current);
+        let literal = Data::Number(value.parse().unwrap_or_default());
 
-        let literal = match is_decimal {
-            true => Data::Decimal(value.parse().unwrap_or_default()),
-            false => Data::Integer(value.parse().unwrap_or_default()),
-        };
-        self.add_token_with_value(TokenType::Number, literal)
+        self.add_token_with_value(TokenType::Number, literal);
     }
 
     fn string(&mut self){

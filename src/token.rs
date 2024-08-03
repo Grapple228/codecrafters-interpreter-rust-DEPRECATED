@@ -70,8 +70,7 @@ impl TokenType {
 
 #[derive(Debug)]
 pub enum Data {
-    Integer(i32),
-    Decimal(f32),
+    Number(f32),
     Boolean(bool),
     Char(char),
     String(String),
@@ -81,8 +80,7 @@ pub enum Data {
 impl Display for Data {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self{
-            Data::Integer(value) => write!(f, "{}", value),
-            Data::Decimal(value) => write!(f, "{}", value),
+            Data::Number(value) => write!(f, "{:?}", value),
             Data::Boolean(value) => write!(f, "{}", value),
             Data::Char(value) => write!(f, "{}", value),
             Data::String(value) => write!(f, "{}", value),
