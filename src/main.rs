@@ -1,5 +1,8 @@
 mod token;
 mod scanner;
+mod char_extensions;
+mod string_extensions;
+mod error;
 
 use std::env;
 use std::fs;
