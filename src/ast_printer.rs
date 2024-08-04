@@ -1,5 +1,5 @@
-use crate::expression::{Expr, Visitor};
-use crate::{expression::AcceptVisitor, value::Value};
+use crate::expression::{Expr, ExprVisitor};
+use crate::value::Value;
 pub struct AstPrinter{}
 
 impl AstPrinter {
@@ -27,7 +27,7 @@ impl AstPrinter {
     }
 }
 
-impl Visitor<String> for AstPrinter {
+impl ExprVisitor<String> for AstPrinter {
     fn visit(&self, expr: &Expr) -> String {
             match expr {
                 Expr::Binary { left, operator, right } => {

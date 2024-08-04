@@ -52,16 +52,12 @@ pub enum Expr {
     },
 }
 
-impl AcceptVisitor for Expr {
-    fn accept<R>(&self, visitor: &impl Visitor<R>) -> R {
+impl Expr {
+    pub fn accept<R>(&self, visitor: &impl ExprVisitor<R>) -> R {
         visitor.visit(self)
     }
 }
 
-pub trait AcceptVisitor {
-    fn accept<R>(&self, visitor: &impl Visitor<R>) -> R;
-}
-
-pub trait Visitor<R> {
-    fn visit(&self, expr: &Expr) -> R;
+pub trait ExprVisitor<R> {
+    fn visit(&self, a: &Expr) -> R;
 }

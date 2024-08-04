@@ -1,16 +1,22 @@
-use crate::{error::ErrorHandler, expression::{AcceptVisitor, Expr, Visitor}, token::{self, TokenType}, value::Value};
+use std::io::Empty;
+
+use crate::{environment::Environment, error::ErrorHandler, expression::{Expr, ExprVisitor}, statement::{Stmt, StmtVisitor}, token::TokenType, value::Value};
 
 pub struct Interpreter{
-
+    environment: Environment
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self {  }
+        Self { environment: Environment::new() }
     }
     
-    pub fn evaluate(&self, expr: &Box<Expr>) -> Value {
+    pub fn evaluate_expr(&self, expr: &Box<Expr>) -> Value {
         expr.accept(self)
+    }
+
+    pub fn evaluate_stmt(&mut self, stmt: &Box<Stmt>) -> (){
+        stmt.accept(self)
     }
 
     fn is_truthy(&self, value: Value) -> bool {
@@ -28,13 +34,30 @@ impl Interpreter {
     }
 }
 
-impl Visitor<Value> for Interpreter {
+impl StmtVisitor<()> for Interpreter {
+    fn visit(&mut self, stmt: &Stmt) -> () {
+        match stmt {
+            Stmt::Print { expression } => {
+                let value = self.evaluate_expr(expression);
+                println!("{}", value.interp_to_string())
+            },
+            Stmt::Var { name, initializer } => {
+                let value = self.evaluate_expr(initializer);
+                self.environment.define(name.lexeme.clone(), value)
+            },
+            a => panic!("Invalid operation! {:?}", a)
+        }
+    }
+}
+
+impl ExprVisitor<Value> for Interpreter {
     fn visit(&self, expr: &Expr) -> Value {
         match expr {
+            Expr::Variable { name } => self.environment.get(name.clone()),
             Expr::Literal { value } => value.clone(),
-            Expr::Grouping { expression } => self.evaluate(expression),
+            Expr::Grouping { expression } => self.evaluate_expr(expression),
             Expr::Unary { operator, right } => {
-                let right = self.evaluate(right);
+                let right = self.evaluate_expr(right);
 
                 match operator.token_type {
                     TokenType::Bang => {
@@ -48,8 +71,8 @@ impl Visitor<Value> for Interpreter {
                 }
             },
             Expr::Binary { left, operator, right } => {
-                let left = self.evaluate(left);
-                let right = self.evaluate(right);
+                let left = self.evaluate_expr(left);
+                let right = self.evaluate_expr(right);
 
                 //println!("{} {} {}", left, operator.lexeme, right);
 

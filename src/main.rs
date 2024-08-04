@@ -9,6 +9,7 @@ mod statement;
 mod parser;
 mod ast_printer;
 mod interpreter;
+mod environment;
 
 use std::env;
 use std::fs;
@@ -16,7 +17,6 @@ use std::io::{self, Write};
 
 use ast_printer::AstPrinter;
 use error::ErrorHandler;
-use expression::Expr;
 use interpreter::Interpreter;
 use parser::Parser;
 use scanner::Scanner;
@@ -55,7 +55,7 @@ fn parse(filename: &String){
     scanner.scan_tokens();
 
     let mut parser = Parser::new(scanner.tokens);
-    let expr = parser.parse();
+    let expr = parser.parse_expr();
 
     if ErrorHandler::had_error(){
         std::process::exit(65)
@@ -67,14 +67,14 @@ fn parse(filename: &String){
     }
 }
 
-fn evaluate(filename: &String) {
+fn evaluate_old(filename: &String) {
     let file_contents = read_file(filename);
 
     let mut scanner = Scanner::new(file_contents);
     scanner.scan_tokens();
 
     let mut parser = Parser::new(scanner.tokens);
-    let expr = parser.parse();
+    let expr = parser.parse_expr();
 
     if ErrorHandler::had_error(){
         std::process::exit(65)
@@ -83,7 +83,7 @@ fn evaluate(filename: &String) {
     match expr {
         Some(expr) => {
             let interpreter = Interpreter::new();
-            let value = interpreter.evaluate(&expr);
+            let value = interpreter.evaluate_expr(&expr);
             
             if ErrorHandler::had_error(){
                 std::process::exit(70)
@@ -93,6 +93,26 @@ fn evaluate(filename: &String) {
         },
         _ => {},
     }
+}
+
+fn evaluate(filename: &String) {
+    let file_contents = read_file(filename);
+
+    let mut scanner = Scanner::new(file_contents);
+    scanner.scan_tokens();
+
+    let mut parser = Parser::new(scanner.tokens);
+    let stmts = parser.parse_stmt();
+
+    if ErrorHandler::had_error(){
+        std::process::exit(65)
+    }
+
+    let mut interpreter = Interpreter::new();
+
+    for stmt in stmts.iter(){
+        _ = interpreter.evaluate_stmt(&stmt);
+    } 
 }
 
 fn main() {
