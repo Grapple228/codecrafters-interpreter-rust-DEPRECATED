@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["parse", "C:\\Users\\green\\OneDrive\\Рабочий Стол\\file.txt"],
+            "args": ["evaluate", "C:\\Users\\green\\OneDrive\\Рабочий Стол\\file.txt"],
             "cwd": "${workspaceFolder}"
         }
     ]

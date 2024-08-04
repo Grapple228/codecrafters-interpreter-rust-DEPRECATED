@@ -1,4 +1,4 @@
-use crate::{expression::{AcceptVisitor, Expr, Visitor}, token::TokenType, value::Value};
+use crate::{expression::{AcceptVisitor, Expr, Visitor}, token::{self, TokenType}, value::Value};
 
 pub struct Interpreter{
 
@@ -48,10 +48,14 @@ impl Visitor<Value> for Interpreter {
                 let left = self.evaluate(left);
                 let right = self.evaluate(right);
 
+                //println!("{} {} {}", left, operator.lexeme, right);
+
                 match (left, right) {
                     (Value::String(str1), Value::String(str2)) => {
                         match operator.token_type{
                             TokenType::Plus => Value::String(str1 + &str2),
+                            TokenType::BangEqual => Value::Bool(str1 != str2),
+                            TokenType::EqualEqual => Value::Bool(str1 == str2),
                             _ => Value::Nil
                         }
                     },
@@ -65,6 +69,8 @@ impl Visitor<Value> for Interpreter {
                             TokenType::GreaterEqual => Value::Bool(num1 >= num2),
                             TokenType::Less => Value::Bool(num1 < num2),
                             TokenType::LessEqual => Value::Bool(num1 <= num2),
+                            TokenType::BangEqual => Value::Bool(num1 != num2),
+                            TokenType::EqualEqual => Value::Bool(num1 == num2),
                             _ => Value::Number(0.0)
                         }
                     },
