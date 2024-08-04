@@ -10,10 +10,12 @@ mod parser;
 mod ast_printer;
 
 use std::env;
+use std::f32::consts::E;
 use std::fs;
 use std::io::{self, Write};
 
 use ast_printer::AstPrinter;
+use error::ErrorHandler;
 use expression::AcceptVisitor;
 use expression::Expr;
 use parser::Parser;
@@ -30,10 +32,7 @@ fn tokenize(filename: &String){
     let mut scanner = Scanner::new(file_contents);
     scanner.scan_tokens();
 
-    if scanner.has_error{
-        for error in scanner.errors.iter(){
-            eprintln!("{}", error)
-        }
+    if ErrorHandler::had_error(){
         exit_code = 65;
     }
 
@@ -53,17 +52,17 @@ fn parse(filename: &String){
     let mut scanner = Scanner::new(file_contents);
     scanner.scan_tokens();
 
-    //println!("{:?}", scanner.tokens);
-
     let mut parser = Parser::new(scanner.tokens);
     let expr = parser.parse();
 
-    if parser.has_error{
-        return;
+    if ErrorHandler::had_error(){
+        std::process::exit(65)
     }
 
-    let printer = AstPrinter::new();
-    println!("{}", printer.print(expr));
+    match expr {
+        Some(e) => println!("{}", AstPrinter::new().print(e)),
+        None => {},
+    }
 }
 
 fn main() {

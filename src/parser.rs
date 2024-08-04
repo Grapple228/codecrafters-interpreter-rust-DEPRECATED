@@ -1,21 +1,20 @@
-use crate::{expression::Expr, token::{Token, TokenType}, value::Value};
+use crate::{error::{ErrorHandler, ParserError}, expression::Expr, token::{Token, TokenType}, value::Value};
 
 pub struct Parser{
     tokens: Vec<Token>,
     current: usize,
-    pub has_error: bool
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0, has_error: false }
+        Self { tokens, current: 0}
     }
 
-    fn expression(&mut self) -> Box<Expr>{
+    fn expression(&mut self) -> Result<Box<Expr>, ParserError> {
         self.equality()
     }
 
-    fn equality(&mut self) -> Box<Expr> {
+    fn equality(&mut self) -> Result<Box<Expr>, ParserError> {
         let mut expr = self.comparsion();
 
         let tokens = vec![
@@ -26,13 +25,13 @@ impl Parser {
             let operator = self.previous().clone();
             let right = self.comparsion();
 
-            expr = Box::new(Expr::Binary { left: expr, operator, right})
+            expr = Ok(Box::new(Expr::Binary { left: expr?, operator, right: right?}))
         }
 
         return expr;
     }
 
-    fn comparsion(&mut self) -> Box<Expr> {
+    fn comparsion(&mut self) -> Result<Box<Expr>, ParserError> {
         let mut expr = self.term();
 
         let tokens = vec![
@@ -43,15 +42,15 @@ impl Parser {
 
         while self.matching(&tokens) {
             let operator = self.previous().clone();
-            let right = self.term();
+            let right = self.term()?;
 
-            expr = Box::new(Expr::Binary { left: expr, operator, right})
+            expr = Ok(Box::new(Expr::Binary { left: expr?, operator, right}))
         }
 
         return expr;
     }
 
-    fn term(&mut self) -> Box<Expr> {
+    fn term(&mut self) -> Result<Box<Expr>, ParserError> {
         let mut expr = self.factor();
 
         let tokens = vec![
@@ -60,15 +59,15 @@ impl Parser {
 
         while self.matching(&tokens) {
             let operator = self.previous().clone();
-            let right = self.factor();
+            let right = self.factor()?;
 
-            expr = Box::new(Expr::Binary { left: expr, operator, right})
+            expr = Ok(Box::new(Expr::Binary { left: expr?, operator, right}))
         }
 
         return expr;
     }
 
-    fn factor(&mut self) -> Box<Expr> {
+    fn factor(&mut self) -> Result<Box<Expr>, ParserError> {
         let mut expr = self.unary();
 
         let tokens = vec![
@@ -77,66 +76,72 @@ impl Parser {
 
         while self.matching(&tokens) {
             let operator = self.previous().clone();
-            let right = self.unary();
+            let right = self.unary()?;
 
-            expr = Box::new(Expr::Binary { left: expr, operator, right})
+            expr = Ok(Box::new(Expr::Binary { left: expr?, operator, right}))
         }
 
         return expr;
     }
 
-    fn unary(&mut self) -> Box<Expr> {
+    fn unary(&mut self) -> Result<Box<Expr>, ParserError> {
         let tokens = vec![
             TokenType::Bang,
             TokenType::Minus];
 
         if self.matching(&tokens) {
             let operator = self.previous().clone();
-            let right = self.unary();
+            let right = self.unary()?;
 
-            return Box::new(Expr::Unary { operator, right })
+            return Ok(Box::new(Expr::Unary { operator, right }))
         }
 
         return self.primary();
     }
 
-    fn primary(&mut self) -> Box<Expr> {
+    fn primary(&mut self) -> Result<Box<Expr>, ParserError> {
         if self.matching(&vec![TokenType::False]){
-            return Box::new(Expr::Literal { value: Value::Bool(false) });
+            return Ok(Box::new(Expr::Literal { value: Value::Bool(false) }));
         }
         if self.matching(&vec![TokenType::True]){
-            return Box::new(Expr::Literal { value: Value::Bool(true) });
+            return Ok(Box::new(Expr::Literal { value: Value::Bool(true) }));
         }
         if self.matching(&vec![TokenType::Nil]){
-            return Box::new(Expr::Literal { value: Value::Nil });
+            return Ok(Box::new(Expr::Literal { value: Value::Nil }));
         }
 
         if self.matching(&vec![TokenType::Number,
                                      TokenType::String]) {
-            return Box::new(Expr::Literal { value:  self.previous().literal.clone() })
+            return Ok(Box::new(Expr::Literal { value:  self.previous().literal.clone() }))
         }
 
         if self.matching(&vec![TokenType::LeftParen]) {
             let expr = self.expression();
-            self.consume(&TokenType::RightParen, String::from("Expect ')' after expression."));
-            return Box::new(Expr::Grouping { expression: expr })
+            _ = self.consume(&TokenType::RightParen, String::from("Expect ')' after expression."));
+            return Ok(Box::new(Expr::Grouping { expression: expr? }))
         }
 
-        let p = self.peek();
-
-        panic!("{} {}", p, "Expect expression.");
+        Err(self.error(self.peek().clone(), String::from("Expect expression.")))
     }
 
-    pub fn parse(&mut self) -> Box<Expr> {
-        self.expression()
+    pub fn parse(&mut self) -> Option<Box<Expr>> {
+        match self.expression(){
+            Ok(expr) => Some(expr),
+            Err(_) => None,
+        }
     }
 
-    fn consume(&mut self, token_type: &TokenType, message: String) -> &Token {
+    fn consume(&mut self, token_type: &TokenType, message: String) -> Result<&Token, ParserError> {
         if self.check(token_type) {
-            return self.advance();
+            return Ok(self.advance());
         }
 
-        panic!("{} {}", self.peek(), message);
+        Err(self.error(self.peek().clone(), message))
+    }
+
+    fn error(&mut self, token: Token, message: String) -> ParserError {
+        ErrorHandler::error_token(token, message);
+        ParserError::new()
     }
 
     fn matching(&mut self, types: &Vec<TokenType>) -> bool {

@@ -1,4 +1,4 @@
-use crate::{char_extensions::CharExtensions, error::ScannerError, string_extensions::StringExtensions, token::{Token, TokenType}, value::Value};
+use crate::{char_extensions::CharExtensions, error::{ErrorHandler}, string_extensions::StringExtensions, token::{Token, TokenType}, value::Value};
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -32,8 +32,6 @@ pub struct Scanner{
     current: usize,
     line: usize,
     pub tokens: Vec<Token>,
-    pub errors: Vec<ScannerError>,
-    pub has_error: bool
 }
 
 impl Scanner{
@@ -43,8 +41,6 @@ impl Scanner{
             current: 0,
             line: 1,
             start: 0,
-            has_error: false,
-            errors: Vec::new(),
             tokens: Vec::new(),
         }
     }
@@ -90,11 +86,6 @@ impl Scanner{
     
     fn get_value(&self) -> String {
         self.source.substring(self.start, self.current)
-    }
-
-    fn error(&mut self, error: ScannerError){
-        self.has_error = true;
-        self.errors.push(error);
     }
 
     pub fn add_token(&mut self, token_type: TokenType) {
@@ -168,7 +159,8 @@ impl Scanner{
                     self.identifier();
                 }
                 else{
-                    self.error(ScannerError::UnexpectedCharacter(self.line, c));
+                    let message = format!("Unexpected character: {}", c);
+                    ErrorHandler::error(self.line, message);
                 }
             }
         }
@@ -218,7 +210,7 @@ impl Scanner{
         }
         
         if self.is_end(){
-            self.error(ScannerError::UnterminatedString(self.line));
+            ErrorHandler::error(self.line, String::from("Unterminated string."));
             return;
         }
 

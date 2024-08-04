@@ -1,29 +1,44 @@
 use std::fmt::{Display, Formatter, Error};
 
-#[derive(Debug, Clone, thiserror::Error)]
-pub enum ScannerError{
-    UnexpectedCharacter(usize, char),
-    UnterminatedString(usize),
-}
+use crate::token::{Token, TokenType};
 
-impl Display for ScannerError {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            Self::UnexpectedCharacter(line, character) => write!(f, "[line {}] Error: Unexpected character: {}", line, character),
-            Self::UnterminatedString(line) => write!(f, "[line {}] Error: Unterminated string.", line),            
+static mut HAS_ERROR: bool = false;
+
+pub struct ErrorHandler{}
+
+impl ErrorHandler{
+    pub fn error(line: usize, message: String){
+        Self::report(line, String::new(), message)
+    }
+
+    pub fn error_token(token: Token, message: String) {
+        if token.token_type == TokenType::Eof{
+            Self::report(token.line, String::from(" at end"), message)
+        } else{
+            let wher = format!(" at '{}'", token.lexeme);
+            Self::report(token.line, wher, message)
         }
+    }
+
+    fn report(line: usize, wher: String, message: String){
+        eprintln!("[line {0}] Error{1}: {2}", line, wher, message);
+        unsafe { HAS_ERROR = true };
+    }
+
+    pub fn had_error() -> bool {
+        unsafe { HAS_ERROR }
+    }
+
+    pub fn reset() {
+        unsafe { HAS_ERROR = false }
     }
 }
 
-#[derive(Debug, Clone, thiserror::Error)]
-pub enum ParserError{
-    BraceExpected,
-}
+#[derive(Debug)]
+pub struct ParserError{}
 
-impl Display for ParserError {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            Self::BraceExpected => panic!("Expect ')' after expression."),
-        }
+impl ParserError {
+    pub fn new() -> Self {
+        Self {  }
     }
 }
