@@ -81,6 +81,7 @@ impl Visitor<Value> for Interpreter {
                     },
                     (val1, val2) => {
                         match operator.token_type {
+                            TokenType::Greater | TokenType::GreaterEqual | TokenType::Less | TokenType::LessEqual |
                             TokenType::Slash | TokenType::Star | TokenType::Minus => 
                             {
                                 ErrorHandler::error(operator.line, String::from("Operands must be numbers."));
