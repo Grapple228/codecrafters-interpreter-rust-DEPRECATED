@@ -1,6 +1,5 @@
 use crate::expression::{Expr, Visitor};
-use crate::expression::AcceptVisitor;
-use crate::value::Value;
+use crate::{expression::AcceptVisitor, value::Value};
 pub struct AstPrinter{}
 
 impl AstPrinter {
@@ -31,12 +30,9 @@ impl AstPrinter {
 impl Visitor<String> for AstPrinter {
     fn visit(&self, expr: &Expr) -> String {
             match expr {
-                Expr::Assign { name, value } => todo!(),
                 Expr::Binary { left, operator, right } => {
                     self.parenthesize(operator.lexeme.clone(), vec![left, right])
                 },
-                Expr::Call { callee, paren, arguments } => todo!(),
-                Expr::Get { object, name } => todo!(),
                 Expr::Grouping { expression } => {
                     self.parenthesize(String::from("group"), 
                                       vec![expression])
@@ -47,14 +43,10 @@ impl Visitor<String> for AstPrinter {
                     }
                     value.to_string()
                 },
-                Expr::Logical { left, operator, right } => todo!(),
-                Expr::Set { left, name, right } => todo!(),
-                Expr::Super { keyword, method } => todo!(),
-                Expr::This { keyword } => todo!(),
                 Expr::Unary { operator, right } => {
                     self.parenthesize(operator.lexeme.clone(), vec![right])
                 },
-                Expr::Variable { name } => todo!(),
+                _ => { todo!() }
             }
         }
 }

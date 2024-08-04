@@ -16,8 +16,11 @@ use std::io::{self, Write};
 
 use ast_printer::AstPrinter;
 use error::ErrorHandler;
+use expression::Expr;
+use interpreter::Interpreter;
 use parser::Parser;
 use scanner::Scanner;
+use value::Value;
 
 fn read_file(filename: &String) -> String{
     fs::read_to_string(filename).unwrap_or_else(|_| {
@@ -67,7 +70,31 @@ fn parse(filename: &String){
 fn evaluate(filename: &String) {
     let file_contents = read_file(filename);
 
+    let mut scanner = Scanner::new(file_contents);
+    scanner.scan_tokens();
 
+    let mut parser = Parser::new(scanner.tokens);
+    let expr = parser.parse();
+
+    if ErrorHandler::had_error(){
+        std::process::exit(65)
+    }
+
+    match expr {
+        Some(expr) => {
+            let interpreter = Interpreter::new();
+            let value = interpreter.evaluate(&expr);
+            
+            println!("{}", if value == Value::Nil{
+                String::from("nil")
+            } else{
+                value.to_string()
+            })
+        },
+        _ => {},
+    }
+
+    
 }
 
 fn main() {
