@@ -55,6 +55,10 @@ impl Visitor<Value> for Interpreter {
                     (Value::String(str1), Value::String(str2)) => {
                         match operator.token_type{
                             TokenType::Plus => Value::String(str1 + &str2),
+                            TokenType::Slash | TokenType::Star | TokenType::Minus =>{
+                                ErrorHandler::error(operator.line, String::from("Operands must be numbers."));
+                                Value::Nil
+                            }
                             TokenType::BangEqual => Value::Bool(str1 != str2),
                             TokenType::EqualEqual => Value::Bool(str1 == str2),
                             _ => Value::Nil
