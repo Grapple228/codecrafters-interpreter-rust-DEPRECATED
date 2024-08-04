@@ -15,6 +15,17 @@ impl Environment {
         self.values.insert(name, value);
     }
 
+    pub fn assign(&mut self, name: &Token, value: Value) {
+        let lexeme = &name.lexeme;
+
+        if self.values.contains_key(&lexeme.clone()){
+            self.values.insert(lexeme.clone(), value);
+            return;
+        }
+
+        ErrorHandler::error_token(name.clone(), format!("Undefined variable '{}'.", lexeme));
+    }
+
     pub fn get(&self, name: Token) -> Value {
         let key = name.lexeme.clone();
 

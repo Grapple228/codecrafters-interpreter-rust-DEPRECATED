@@ -3,7 +3,7 @@ use crate::value::Value;
 pub struct AstPrinter{}
 
 impl AstPrinter {
-    pub fn print(&self, expr: Box<Expr>) -> String{
+    pub fn print(&mut self, expr: Box<Expr>) -> String{
         expr.accept(self)
     }
 
@@ -13,7 +13,7 @@ impl AstPrinter {
 }
 
 impl AstPrinter {
-    fn parenthesize(&self, name: String, expressions: Vec<&Box<Expr>>) -> String{
+    fn parenthesize(&mut self, name: String, expressions: Vec<&Box<Expr>>) -> String{
         let mut builder = String::from("(");
         builder.push_str(&name);
         
@@ -28,7 +28,7 @@ impl AstPrinter {
 }
 
 impl ExprVisitor<String> for AstPrinter {
-    fn visit(&self, expr: &Expr) -> String {
+    fn visit(&mut self, expr: &Expr) -> String {
             match expr {
                 Expr::Binary { left, operator, right } => {
                     self.parenthesize(operator.lexeme.clone(), vec![left, right])

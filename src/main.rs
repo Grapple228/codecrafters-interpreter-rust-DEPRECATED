@@ -82,7 +82,7 @@ fn evaluate_old(filename: &String) {
 
     match expr {
         Some(expr) => {
-            let interpreter = Interpreter::new();
+            let mut interpreter = Interpreter::new();
             let value = interpreter.evaluate_expr(&expr);
             
             if ErrorHandler::had_error(){

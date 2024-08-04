@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{expression::Expr, token::Token};
 
 #[derive(Debug)]

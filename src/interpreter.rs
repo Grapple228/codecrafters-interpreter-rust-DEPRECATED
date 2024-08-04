@@ -1,5 +1,3 @@
-use std::io::Empty;
-
 use crate::{environment::Environment, error::ErrorHandler, expression::{Expr, ExprVisitor}, statement::{Stmt, StmtVisitor}, token::TokenType, value::Value};
 
 pub struct Interpreter{
@@ -11,7 +9,7 @@ impl Interpreter {
         Self { environment: Environment::new() }
     }
     
-    pub fn evaluate_expr(&self, expr: &Box<Expr>) -> Value {
+    pub fn evaluate_expr(&mut self, expr: &Box<Expr>) -> Value {
         expr.accept(self)
     }
 
@@ -41,18 +39,26 @@ impl StmtVisitor<()> for Interpreter {
                 let value = self.evaluate_expr(expression);
                 println!("{}", value.interp_to_string())
             },
+            Stmt::Expression { expression } => {
+                self.evaluate_expr(expression);
+            },
             Stmt::Var { name, initializer } => {
                 let value = self.evaluate_expr(initializer);
                 self.environment.define(name.lexeme.clone(), value)
             },
-            a => panic!("Invalid operation! {:?}", a)
+            _ => panic!("Statement not defined!")
         }
     }
 }
 
 impl ExprVisitor<Value> for Interpreter {
-    fn visit(&self, expr: &Expr) -> Value {
+    fn visit(&mut self, expr: &Expr) -> Value {
         match expr {
+            Expr::Assign { name, value } => {
+                let value = self.evaluate_expr(value);
+                self.environment.assign(name, value.clone());
+                return value;
+            },
             Expr::Variable { name } => self.environment.get(name.clone()),
             Expr::Literal { value } => value.clone(),
             Expr::Grouping { expression } => self.evaluate_expr(expression),
@@ -73,8 +79,6 @@ impl ExprVisitor<Value> for Interpreter {
             Expr::Binary { left, operator, right } => {
                 let left = self.evaluate_expr(left);
                 let right = self.evaluate_expr(right);
-
-                //println!("{} {} {}", left, operator.lexeme, right);
 
                 match (left, right) {
                     (Value::String(str1), Value::String(str2)) => {

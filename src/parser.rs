@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::{error::{ErrorHandler, ParserError}, expression::Expr, statement::{self, Stmt}, token::{Token, TokenType}, value::Value};
+use crate::{error::{ErrorHandler, ParserError}, expression::Expr, statement::{self, Stmt}, token::{Token, TokenType}, value::{self, Value}};
 
 pub struct Parser{
     tokens: Vec<Token>,
@@ -13,7 +13,7 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Box<Expr>, ParserError> {
-        self.equality()
+        self.assignment()
     }
 
     fn equality(&mut self) -> Result<Box<Expr>, ParserError> {
@@ -135,6 +135,26 @@ impl Parser {
             Ok(expr) => Some(expr),
             Err(_) => None,
         }
+    }
+
+    fn assignment(&mut self) -> Result<Box<Expr>, ParserError> {
+        let expr = self.equality().unwrap();
+
+        if self.matching(&vec![TokenType::Equal]){
+            let equals = &self.previous().clone();
+            let value = self.assignment();
+
+            match *expr {
+                Expr::Variable { name } => {
+                    return Ok(Box::new(Expr::Assign { name, value: value? }))
+                },
+                _ => {
+                    self.error(equals.clone(), String::from("Invalid assignment target."));
+                }
+            }
+        }
+
+        Ok(expr)
     }
 
     fn var_declaration(&mut self) -> Result<Box<Stmt>, ParserError> {
