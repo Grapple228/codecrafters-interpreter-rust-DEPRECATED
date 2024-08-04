@@ -21,6 +21,11 @@ impl Interpreter {
 
         }
     }
+
+    fn error(line: usize, message: &'static str) -> Value{
+        ErrorHandler::error(line, String::from(message));
+        Value::Nil
+    }
 }
 
 impl Visitor<Value> for Interpreter {
@@ -37,10 +42,7 @@ impl Visitor<Value> for Interpreter {
                     },
                     TokenType::Minus => match right{
                         Value::Number(num) => Value::Number(-num),
-                        _ => {
-                            ErrorHandler::error(operator.line, String::from("Operand must be a number."));
-                            Value::Nil
-                        },
+                        _ => Interpreter::error(operator.line, "Operand must be a number."),
                     } ,
                     _ => Value::Nil
                 }
@@ -55,10 +57,7 @@ impl Visitor<Value> for Interpreter {
                     (Value::String(str1), Value::String(str2)) => {
                         match operator.token_type{
                             TokenType::Plus => Value::String(str1 + &str2),
-                            TokenType::Slash | TokenType::Star | TokenType::Minus =>{
-                                ErrorHandler::error(operator.line, String::from("Operands must be numbers."));
-                                Value::Nil
-                            }
+                            TokenType::Slash | TokenType::Star | TokenType::Minus => Interpreter::error(operator.line, "Operands must be numbers."),
                             TokenType::BangEqual => Value::Bool(str1 != str2),
                             TokenType::EqualEqual => Value::Bool(str1 == str2),
                             _ => Value::Nil
@@ -82,15 +81,8 @@ impl Visitor<Value> for Interpreter {
                     (val1, val2) => {
                         match operator.token_type {
                             TokenType::Greater | TokenType::GreaterEqual | TokenType::Less | TokenType::LessEqual |
-                            TokenType::Slash | TokenType::Star | TokenType::Minus => 
-                            {
-                                ErrorHandler::error(operator.line, String::from("Operands must be numbers."));
-                                Value::Nil
-                            },
-                            TokenType::Plus => {
-                                ErrorHandler::error(operator.line, String::from("Operands must be two numbers or two strings."));
-                                Value::Nil
-                            },
+                            TokenType::Slash | TokenType::Star | TokenType::Minus => Interpreter::error(operator.line, "Operands must be numbers."),
+                            TokenType::Plus => Interpreter::error(operator.line, "Operands must be two numbers or two strings."),
                             TokenType::BangEqual => Value::Bool(!val1.is_equal(val2)),
                             TokenType::EqualEqual => Value::Bool(val1.is_equal(val2)),
                             _ => Value::Nil
