@@ -1,4 +1,4 @@
-use crate::{expression::{AcceptVisitor, Expr, Visitor}, token::{self, TokenType}, value::Value};
+use crate::{error::ErrorHandler, expression::{AcceptVisitor, Expr, Visitor}, token::{self, TokenType}, value::Value};
 
 pub struct Interpreter{
 
@@ -38,7 +38,8 @@ impl Visitor<Value> for Interpreter {
                     TokenType::Minus => match right{
                         Value::Number(num) => Value::Number(-num),
                         _ => {
-                            panic!("Operand must be a number.");
+                            ErrorHandler::error(operator.line, String::from("Operand must be a number."));
+                            Value::Nil
                         },
                     } ,
                     _ => Value::Nil
@@ -77,8 +78,14 @@ impl Visitor<Value> for Interpreter {
                     (val1, val2) => {
                         match operator.token_type {
                             TokenType::Slash | TokenType::Star | TokenType::Minus => 
-                                panic!("Operands must be numbers."),
-                            TokenType::Plus => panic!("Operands must be two numbers or two strings."),
+                            {
+                                ErrorHandler::error(operator.line, String::from("Operands must be numbers."));
+                                Value::Nil
+                            },
+                            TokenType::Plus => {
+                                ErrorHandler::error(operator.line, String::from("Operands must be two numbers or two strings."));
+                                Value::Nil
+                            },
                             TokenType::BangEqual => Value::Bool(!val1.is_equal(val2)),
                             TokenType::EqualEqual => Value::Bool(val1.is_equal(val2)),
                             _ => Value::Nil

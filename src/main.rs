@@ -85,6 +85,10 @@ fn evaluate(filename: &String) {
             let interpreter = Interpreter::new();
             let value = interpreter.evaluate(&expr);
             
+            if ErrorHandler::had_error(){
+                std::process::exit(70)
+            }
+
             println!("{}", value.interp_to_string())
         },
         _ => {},
