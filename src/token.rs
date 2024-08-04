@@ -1,6 +1,8 @@
 use std::fmt::{Debug, Display};
 
-#[derive(Debug, Clone)]
+use crate::{expression::Expr, value::Value};
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
   LeftParen, RightParen, LeftBrace, RightBrace,
@@ -68,47 +70,33 @@ impl TokenType {
     }
 }
 
-#[derive(Debug)]
-pub enum Data {
-    Number(f32),
-    Boolean(bool),
-    Char(char),
-    String(String),
-    Null
-}
-
-impl Display for Data {
+impl Display for TokenType{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self{
-            Data::Number(value) => write!(f, "{:?}", value),
-            Data::Boolean(value) => write!(f, "{}", value),
-            Data::Char(value) => write!(f, "{}", value),
-            Data::String(value) => write!(f, "{}", value),
-            Data::Null => write!(f, "null"),
-        }
+        write!(f, "{}", self.as_str())
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
-    pub literal: Data,
+    pub literal: Value,
     pub line: usize
 }
 
 impl Token {
-    pub fn eof(line: usize) -> Token{
+    pub fn eof(line: usize) -> Token {
         Token{
             token_type: TokenType::Eof,
             lexeme: String::new(),
             line,
-            literal: Data::Null
+            literal: Value::Nil
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
-
-        format!("{} {} {}", self.token_type.as_str(), self.lexeme,self.literal)
+impl Display for Token{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {} {}", self.token_type, self.lexeme, self.literal.to_string())
     }
 }

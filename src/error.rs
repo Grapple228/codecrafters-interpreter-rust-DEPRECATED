@@ -14,3 +14,16 @@ impl Display for ScannerError {
         }
     }
 }
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum ParserError{
+    BraceExpected,
+}
+
+impl Display for ParserError {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        match self {
+            Self::BraceExpected => panic!("Expect ')' after expression."),
+        }
+    }
+}
