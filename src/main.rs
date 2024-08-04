@@ -93,8 +93,6 @@ fn evaluate(filename: &String) {
         },
         _ => {},
     }
-
-    
 }
 
 fn main() {
