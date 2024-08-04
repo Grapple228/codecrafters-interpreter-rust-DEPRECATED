@@ -5,6 +5,14 @@ static mut HAS_ERROR: bool = false;
 pub struct ErrorHandler{}
 
 impl ErrorHandler{
+    pub fn runtime_error(operator: &Token, message: String){
+        let message = format!("[line {}] Runtime Error: {}", operator.line, message);
+
+        eprintln!("{}", message);
+
+        std::process::exit(70)
+    }
+    
     pub fn error(line: usize, message: String){
         Self::report(line, String::new(), message)
     }

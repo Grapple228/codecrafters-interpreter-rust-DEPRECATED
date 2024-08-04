@@ -1,4 +1,4 @@
-use crate::{token::Token, value::Value};
+use crate::{error::ParserError, token::Token, value::Value};
 
 #[derive(Debug)]
 pub enum Expr {
@@ -53,6 +53,10 @@ pub enum Expr {
 }
 
 impl Expr {
+    pub fn wrap(self) -> Result<Box<Expr>, ParserError>{
+        Ok(Box::new(self))
+    }
+
     pub fn accept<R>(&self, visitor: &mut impl ExprVisitor<R>) -> R {
         visitor.visit(self)
     }

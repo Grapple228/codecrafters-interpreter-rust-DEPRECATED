@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use crate::{error::{ErrorHandler, ParserError}, expression::Expr, statement::{self, Stmt}, token::{Token, TokenType}, value::{self, Value}};
 
 pub struct Parser{
@@ -27,7 +25,7 @@ impl Parser {
             let operator = self.previous().clone();
             let right = self.comparsion();
 
-            expr = Ok(Box::new(Expr::Binary { left: expr?, operator, right: right?}))
+            expr = Expr::Binary { left: expr?, operator, right: right?}.wrap()
         }
 
         return expr;
@@ -46,7 +44,7 @@ impl Parser {
             let operator = self.previous().clone();
             let right = self.term()?;
 
-            expr = Ok(Box::new(Expr::Binary { left: expr?, operator, right}))
+            expr = Expr::Binary { left: expr?, operator, right}.wrap()
         }
 
         return expr;
@@ -63,7 +61,7 @@ impl Parser {
             let operator = self.previous().clone();
             let right = self.factor()?;
 
-            expr = Ok(Box::new(Expr::Binary { left: expr?, operator, right}))
+            expr = Expr::Binary { left: expr?, operator, right}.wrap()
         }
 
         return expr;
@@ -80,7 +78,7 @@ impl Parser {
             let operator = self.previous().clone();
             let right = self.unary()?;
 
-            expr = Ok(Box::new(Expr::Binary { left: expr?, operator, right}))
+            expr = Expr::Binary { left: expr?, operator, right}.wrap()
         }
 
         return expr;
@@ -95,7 +93,7 @@ impl Parser {
             let operator = self.previous().clone();
             let right = self.unary()?;
 
-            return Ok(Box::new(Expr::Unary { operator, right }))
+            return Expr::Unary { operator, right }.wrap()
         }
 
         return self.primary();
@@ -103,28 +101,27 @@ impl Parser {
 
     fn primary(&mut self) -> Result<Box<Expr>, ParserError> {
         if self.matching(&vec![TokenType::False]){
-            return Ok(Box::new(Expr::Literal { value: Value::Bool(false) }));
+            return Expr::Literal { value: Value::Bool(false) }.wrap()
         }
         if self.matching(&vec![TokenType::True]){
-            return Ok(Box::new(Expr::Literal { value: Value::Bool(true) }));
+            return Expr::Literal { value: Value::Bool(true) }.wrap()
         }
         if self.matching(&vec![TokenType::Nil]){
-            return Ok(Box::new(Expr::Literal { value: Value::Nil }));
+            return Expr::Literal { value: Value::Nil }.wrap()
         }
-
         if self.matching(&vec![TokenType::Number,
                                      TokenType::String]) {
-            return Ok(Box::new(Expr::Literal { value:  self.previous().literal.clone() }))
+            return Expr::Literal { value:  self.previous().literal.clone() }.wrap()
         }
 
         if self.matching(&vec![TokenType::Identifier]) {
-            return Ok(Box::new(Expr::Variable { name: self.previous().clone() }));
+            return Expr::Variable { name: self.previous().clone() }.wrap()
         }
 
         if self.matching(&vec![TokenType::LeftParen]) {
             let expr = self.expression();
             _ = self.consume(&TokenType::RightParen, String::from("Expect ')' after expression."));
-            return Ok(Box::new(Expr::Grouping { expression: expr? }))
+            return Expr::Grouping { expression: expr? }.wrap()
         }
 
         Err(self.error(self.peek().clone(), String::from("Expect expression.")))
@@ -146,7 +143,7 @@ impl Parser {
 
             match *expr {
                 Expr::Variable { name } => {
-                    return Ok(Box::new(Expr::Assign { name, value: value? }))
+                    return Expr::Assign { name, value: value? }.wrap()
                 },
                 _ => {
                     self.error(equals.clone(), String::from("Invalid assignment target."));
@@ -160,7 +157,7 @@ impl Parser {
     fn var_declaration(&mut self) -> Result<Box<Stmt>, ParserError> {
         let name = &self.consume(&TokenType::Identifier, String::from("Expect variable name.")).unwrap().clone();
 
-        let mut initializer = Ok(Box::new(Expr::Literal { value: Value::Nil }));
+        let mut initializer = Expr::Literal { value: Value::Nil }.wrap();
 
         if self.matching(&vec![TokenType::Equal]){
             initializer = self.expression();
@@ -168,7 +165,7 @@ impl Parser {
 
         _ = self.consume(&TokenType::Semicolon, String::from("Expect ';' after variable declaration"));
 
-        Ok(Box::new(Stmt::Var { name: name.clone(), initializer: initializer? }))
+        Stmt::Var { name: name.clone(), initializer: initializer? }.wrap()
     }
 
     fn declaration(&mut self) -> Result<Box<Stmt>, ParserError> {
@@ -211,13 +208,13 @@ impl Parser {
     fn expression_statement(&mut self) -> Result<Box<Stmt>, ParserError>{
         let value = self.expression();
         _ = self.consume(&TokenType::Semicolon, String::from("Expect ';' after expression."));
-        Ok(Box::new(Stmt::Expression { expression: value? }))
+        Stmt::Expression { expression: value? }.wrap()
     }
 
     fn print_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
         let value = self.expression();
         _ = self.consume(&TokenType::Semicolon, String::from("Expect ';' after value."));
-        Ok(Box::new(Stmt::Print { expression: value? }))
+        Stmt::Print { expression: value? }.wrap()
     }
 
     fn consume(&mut self, token_type: &TokenType, message: String) -> Result<&Token, ParserError> {

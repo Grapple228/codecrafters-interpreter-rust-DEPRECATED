@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{expression::Expr, token::Token};
+use crate::{error::ParserError, expression::Expr, token::Token};
 
 #[derive(Debug)]
 pub enum Stmt{
@@ -43,6 +43,10 @@ pub enum Stmt{
 }
 
 impl Stmt {
+    pub fn wrap(self) -> Result<Box<Stmt>, ParserError>{
+        Ok(Box::new(self))
+    }
+
     pub fn accept<R>(&self, visitor: &mut impl StmtVisitor<R>) -> () {
         visitor.visit(self)
     }

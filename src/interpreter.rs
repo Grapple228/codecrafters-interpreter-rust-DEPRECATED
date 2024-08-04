@@ -1,4 +1,4 @@
-use crate::{environment::Environment, error::ErrorHandler, expression::{Expr, ExprVisitor}, statement::{Stmt, StmtVisitor}, token::TokenType, value::Value};
+use crate::{environment::Environment, error::ErrorHandler, expression::{Expr, ExprVisitor}, statement::{Stmt, StmtVisitor}, token::{Token, TokenType}, value::Value};
 
 pub struct Interpreter{
     environment: Environment
@@ -26,8 +26,8 @@ impl Interpreter {
         }
     }
 
-    fn error(line: usize, message: &'static str) -> Value{
-        ErrorHandler::error(line, String::from(message));
+    fn runtime_error(operator: &Token, message: &'static str) -> Value{
+        ErrorHandler::runtime_error(operator, String::from(message));
         Value::Nil
     }
 }
@@ -71,7 +71,7 @@ impl ExprVisitor<Value> for Interpreter {
                     },
                     TokenType::Minus => match right{
                         Value::Number(num) => Value::Number(-num),
-                        _ => Interpreter::error(operator.line, "Operand must be a number."),
+                        _ => Interpreter::runtime_error(operator, "Operand must be a number."),
                     } ,
                     _ => Value::Nil
                 }
@@ -84,7 +84,7 @@ impl ExprVisitor<Value> for Interpreter {
                     (Value::String(str1), Value::String(str2)) => {
                         match operator.token_type{
                             TokenType::Plus => Value::String(str1 + &str2),
-                            TokenType::Slash | TokenType::Star | TokenType::Minus => Interpreter::error(operator.line, "Operands must be numbers."),
+                            TokenType::Slash | TokenType::Star | TokenType::Minus => Interpreter::runtime_error(operator, "Operands must be numbers."),
                             TokenType::BangEqual => Value::Bool(str1 != str2),
                             TokenType::EqualEqual => Value::Bool(str1 == str2),
                             _ => Value::Nil
@@ -108,8 +108,8 @@ impl ExprVisitor<Value> for Interpreter {
                     (val1, val2) => {
                         match operator.token_type {
                             TokenType::Greater | TokenType::GreaterEqual | TokenType::Less | TokenType::LessEqual |
-                            TokenType::Slash | TokenType::Star | TokenType::Minus => Interpreter::error(operator.line, "Operands must be numbers."),
-                            TokenType::Plus => Interpreter::error(operator.line, "Operands must be two numbers or two strings."),
+                            TokenType::Slash | TokenType::Star | TokenType::Minus => Interpreter::runtime_error(operator, "Operands must be numbers."),
+                            TokenType::Plus => Interpreter::runtime_error(operator, "Operands must be two numbers or two strings."),
                             TokenType::BangEqual => Value::Bool(!val1.is_equal(val2)),
                             TokenType::EqualEqual => Value::Bool(val1.is_equal(val2)),
                             _ => Value::Nil
