@@ -1,5 +1,3 @@
-use std::fmt::{Display, Formatter, Error};
-
 use crate::token::{Token, TokenType};
 
 static mut HAS_ERROR: bool = false;

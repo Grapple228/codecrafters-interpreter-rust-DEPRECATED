@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-use crate::{expression::Expr, value::Value};
+use crate::value::Value;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {

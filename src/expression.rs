@@ -1,9 +1,5 @@
 use crate::{token::Token, value::Value};
 
-pub trait Visitor<R> {
-    fn visit(&self, expr: &Expr) -> R;
-}
-
 #[derive(Debug)]
 pub enum Expr {
     Assign{
@@ -56,12 +52,16 @@ pub enum Expr {
     },
 }
 
-pub trait AcceptVisitor {
-    fn accept<R>(&self, visitor: &impl Visitor<R>) -> R;
-}
-
 impl AcceptVisitor for Expr {
     fn accept<R>(&self, visitor: &impl Visitor<R>) -> R {
         visitor.visit(self)
     }
+}
+
+pub trait AcceptVisitor {
+    fn accept<R>(&self, visitor: &impl Visitor<R>) -> R;
+}
+
+pub trait Visitor<R> {
+    fn visit(&self, expr: &Expr) -> R;
 }

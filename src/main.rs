@@ -8,24 +8,26 @@ mod value;
 mod statement;
 mod parser;
 mod ast_printer;
+mod interpreter;
 
 use std::env;
-use std::f32::consts::E;
 use std::fs;
 use std::io::{self, Write};
 
 use ast_printer::AstPrinter;
 use error::ErrorHandler;
-use expression::AcceptVisitor;
-use expression::Expr;
 use parser::Parser;
 use scanner::Scanner;
 
-fn tokenize(filename: &String){
-    let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
+fn read_file(filename: &String) -> String{
+    fs::read_to_string(filename).unwrap_or_else(|_| {
         writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
         String::new()
-    });
+    })
+}
+
+fn tokenize(filename: &String){
+    let file_contents = read_file(filename);
 
     let mut exit_code = 0;
 
@@ -44,10 +46,7 @@ fn tokenize(filename: &String){
 }
 
 fn parse(filename: &String){
-    let file_contents = fs::read_to_string(filename).unwrap_or_else(|_| {
-        writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
-        String::new()
-    });
+    let file_contents = read_file(filename);
 
     let mut scanner = Scanner::new(file_contents);
     scanner.scan_tokens();
@@ -61,8 +60,14 @@ fn parse(filename: &String){
 
     match expr {
         Some(e) => println!("{}", AstPrinter::new().print(e)),
-        None => {},
+        _ => {},
     }
+}
+
+fn evaluate(filename: &String) {
+    let file_contents = read_file(filename);
+
+
 }
 
 fn main() {
@@ -79,9 +84,12 @@ fn main() {
     match command.as_str() {
         "tokenize" => tokenize(filename),
         "parse" => parse(filename),
+        "evaluate" => evaluate(filename),
         _ => {
             writeln!(io::stderr(), "Unknown command: {}", command).unwrap();
             return;
         }
     }
 }
+
+
