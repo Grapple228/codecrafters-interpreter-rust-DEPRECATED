@@ -85,11 +85,7 @@ fn evaluate(filename: &String) {
             let interpreter = Interpreter::new();
             let value = interpreter.evaluate(&expr);
             
-            println!("{}", if value == Value::Nil{
-                String::from("nil")
-            } else{
-                value.to_string()
-            })
+            println!("{}", value.interp_to_string())
         },
         _ => {},
     }

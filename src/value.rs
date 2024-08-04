@@ -20,6 +20,15 @@ impl Value{
         }
     }
 
+    pub fn interp_to_string(&self) -> String {
+        match self {
+            Value::Number(value) => format!("{}", value),
+            Value::Bool(value) => value.to_string(),
+            Value::String(value) => value.to_owned(),
+            Value::Nil => String::from("nil"),
+        }
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             Value::Number(value) => format!("{:?}", value),
