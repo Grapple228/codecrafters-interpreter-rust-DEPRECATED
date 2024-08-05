@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use crate::{error::ParserError, expression::Expr, token::Token};
 
 #[derive(Debug)]

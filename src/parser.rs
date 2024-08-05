@@ -1,4 +1,4 @@
-use crate::{error::{ErrorHandler, ParserError}, expression::Expr, statement::{self, Stmt}, token::{Token, TokenType}, value::{self, Value}};
+use crate::{error::{ErrorHandler, ParserError}, expression::Expr, statement::Stmt, token::{Token, TokenType}, value::Value};
 
 pub struct Parser{
     tokens: Vec<Token>,
@@ -157,7 +157,7 @@ impl Parser {
     fn var_declaration(&mut self) -> Result<Box<Stmt>, ParserError> {
         let name = &self.consume(&TokenType::Identifier, String::from("Expect variable name.")).unwrap().clone();
 
-        let mut initializer = Expr::Literal { value: Value::Nil }.wrap();
+        let mut initializer = Expr::Literal { value: Value::Unitialized }.wrap();
 
         if self.matching(&vec![TokenType::Equal]){
             initializer = self.expression();
@@ -202,7 +202,24 @@ impl Parser {
             return self.print_statement();
         }
 
+        if self.matching(&vec![TokenType::LeftBrace]){
+            return Stmt::Block { statements: self.block() }.wrap();
+        }
+
         self.expression_statement()
+    }
+
+    fn block(&mut self) -> Vec<Box<Stmt>>{
+        let mut stmts = Vec::new();
+
+        while !self.check(&TokenType::RightBrace) 
+            & !self.is_end() {
+            stmts.push(self.declaration().unwrap());
+        }
+
+        _ = self.consume(&TokenType::RightBrace, String::from("Expect '}' after block."));
+
+        stmts
     }
 
     fn expression_statement(&mut self) -> Result<Box<Stmt>, ParserError>{

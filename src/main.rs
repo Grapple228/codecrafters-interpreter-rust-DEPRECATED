@@ -14,13 +14,11 @@ mod environment;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
-
 use ast_printer::AstPrinter;
 use error::ErrorHandler;
 use interpreter::Interpreter;
 use parser::Parser;
 use scanner::Scanner;
-use value::Value;
 
 fn read_file(filename: &String) -> String{
     fs::read_to_string(filename).unwrap_or_else(|_| {
@@ -83,7 +81,7 @@ fn evaluate_old(filename: &String) {
     match expr {
         Some(expr) => {
             let mut interpreter = Interpreter::new();
-            let value = interpreter.evaluate_expr(&expr);
+            let value = interpreter.execute_expr(&expr);
             
             if ErrorHandler::had_error(){
                 std::process::exit(70)
@@ -111,7 +109,7 @@ fn evaluate(filename: &String) {
     let mut interpreter = Interpreter::new();
 
     for stmt in stmts.iter(){
-        _ = interpreter.evaluate_stmt(&stmt);
+        _ = interpreter.execute_stmt(&stmt);
     } 
 }
 
