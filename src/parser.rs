@@ -1,13 +1,20 @@
+use std::ops::Deref;
+
 use crate::{error::{ErrorHandler, ParserError}, expression::Expr, statement::Stmt, token::{Token, TokenType}, value::Value};
 
 pub struct Parser{
     tokens: Vec<Token>,
     current: usize,
+    is_expression: bool
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0}
+        Self { tokens, current: 0, is_expression: true}
+    }
+
+    pub fn is_expression(&self) -> bool {
+        self.is_expression
     }
 
     fn expression(&mut self) -> Result<Box<Expr>, ParserError> {
@@ -135,26 +142,33 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Result<Box<Expr>, ParserError> {
-        let expr = self.equality().unwrap();
+        let expr = self.equality();
 
         if self.matching(&vec![TokenType::Equal]){
             let equals = &self.previous().clone();
             let value = self.assignment();
 
-            match *expr {
-                Expr::Variable { name } => {
-                    return Expr::Assign { name, value: value? }.wrap()
+            match expr.as_ref() {
+                Ok(ok) => {
+                    match ok.as_ref() {
+                        Expr::Variable { name } => {
+                            return Expr::Assign { name: name.clone(), value: value? }.wrap()
+                        },
+                        _ => {
+                            self.error(equals.clone(), String::from("Invalid assignment target."));
+                        }
+                    }
                 },
-                _ => {
-                    self.error(equals.clone(), String::from("Invalid assignment target."));
-                }
+                Err(e) => return Err(e.clone())
             }
         }
 
-        Ok(expr)
+        expr
     }
 
     fn var_declaration(&mut self) -> Result<Box<Stmt>, ParserError> {
+        self.is_expression = false;
+
         let name = &self.consume(&TokenType::Identifier, String::from("Expect variable name.")).unwrap().clone();
 
         let mut initializer = Expr::Literal { value: Value::Unitialized }.wrap();
@@ -197,18 +211,6 @@ impl Parser {
         stmts
     }
 
-    fn statement(&mut self) -> Result<Box<Stmt>, ParserError> {
-        if self.matching(&vec![TokenType::Print]){
-            return self.print_statement();
-        }
-
-        if self.matching(&vec![TokenType::LeftBrace]){
-            return Stmt::Block { statements: self.block() }.wrap();
-        }
-
-        self.expression_statement()
-    }
-
     fn block(&mut self) -> Vec<Box<Stmt>>{
         let mut stmts = Vec::new();
 
@@ -222,13 +224,29 @@ impl Parser {
         stmts
     }
 
+    fn statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+        if self.matching(&vec![TokenType::Print]){
+            return self.print_statement();
+        }
+
+        if self.matching(&vec![TokenType::LeftBrace]){
+            self.is_expression = false;
+            return Stmt::Block { statements: self.block() }.wrap();
+        }
+
+        self.expression_statement()
+    }
+
     fn expression_statement(&mut self) -> Result<Box<Stmt>, ParserError>{
         let value = self.expression();
-        _ = self.consume(&TokenType::Semicolon, String::from("Expect ';' after expression."));
+        if !self.is_expression{
+            _ = self.consume(&TokenType::Semicolon, String::from("Expect ';' after expression."));
+        }
         Stmt::Expression { expression: value? }.wrap()
     }
 
     fn print_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+        self.is_expression = false;
         let value = self.expression();
         _ = self.consume(&TokenType::Semicolon, String::from("Expect ';' after value."));
         Stmt::Print { expression: value? }.wrap()

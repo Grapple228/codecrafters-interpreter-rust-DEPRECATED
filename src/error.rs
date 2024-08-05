@@ -40,7 +40,7 @@ impl ErrorHandler{
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParserError{}
 
 impl ParserError {

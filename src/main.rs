@@ -19,6 +19,7 @@ use error::ErrorHandler;
 use interpreter::Interpreter;
 use parser::Parser;
 use scanner::Scanner;
+use statement::Stmt;
 
 fn read_file(filename: &String) -> String{
     fs::read_to_string(filename).unwrap_or_else(|_| {
@@ -65,34 +66,6 @@ fn parse(filename: &String){
     }
 }
 
-fn evaluate_old(filename: &String) {
-    let file_contents = read_file(filename);
-
-    let mut scanner = Scanner::new(file_contents);
-    scanner.scan_tokens();
-
-    let mut parser = Parser::new(scanner.tokens);
-    let expr = parser.parse_expr();
-
-    if ErrorHandler::had_error(){
-        std::process::exit(65)
-    }
-
-    match expr {
-        Some(expr) => {
-            let mut interpreter = Interpreter::new();
-            let value = interpreter.execute_expr(&expr);
-            
-            if ErrorHandler::had_error(){
-                std::process::exit(70)
-            }
-
-            println!("{}", value.interp_to_string())
-        },
-        _ => {},
-    }
-}
-
 fn evaluate(filename: &String) {
     let file_contents = read_file(filename);
 
@@ -103,11 +76,32 @@ fn evaluate(filename: &String) {
     let stmts = parser.parse_stmt();
 
     if ErrorHandler::had_error(){
-        std::process::exit(65)
+        std::process::exit(70)
     }
 
     let mut interpreter = Interpreter::new();
 
+    // If expression check
+    if parser.is_expression() && stmts.len() >= 1{
+        let expr = stmts.get(0).unwrap().as_ref();
+
+        match expr {
+            Stmt::Expression { expression } => {
+                let value = interpreter.execute_expr(expression);
+
+                if ErrorHandler::had_error(){
+                    std::process::exit(65)
+                }
+    
+                println!("{}", value.interp_to_string());
+                return;
+            },
+            _ => {}
+        }
+        
+    }
+    
+    // If statements
     for stmt in stmts.iter(){
         _ = interpreter.execute_stmt(&stmt);
     } 
