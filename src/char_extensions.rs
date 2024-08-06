@@ -3,7 +3,7 @@ pub trait CharExtensions {
     fn is_alpha(&self) -> bool;
 }
 
-impl CharExtensions for char{
+impl CharExtensions for char {
     fn is_alpha_numeric(&self) -> bool {
         self.is_alpha() || self.is_digit(10)
     }

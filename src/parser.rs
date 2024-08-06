@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use crate::{error::{ErrorHandler, ParserError}, expression::Expr, statement::Stmt, token::{Token, TokenType}, value::Value};
 
 pub struct Parser{
@@ -224,7 +222,26 @@ impl Parser {
         stmts
     }
 
+    fn if_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+        _ = self.consume(&TokenType::LeftParen, String::from("Expect '(' after 'if'."));
+        let condition = self.expression();
+        _ = self.consume(&TokenType::RightParen, String::from("Expect ')' after if condition."));
+
+        let then_branch = self.statement();
+        let mut else_branch = None;
+
+        if self.matching(&vec![TokenType::Else]){
+            else_branch = Some(self.statement()?);
+        }
+
+        Stmt::If { condition:condition?, then_branch: then_branch?, else_branch }.wrap()
+    }
+
     fn statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+        if self.matching(&vec![TokenType::If]){
+            return self.if_statement();
+        }
+        
         if self.matching(&vec![TokenType::Print]){
             return self.print_statement();
         }

@@ -34,10 +34,6 @@ impl ErrorHandler{
     pub fn had_error() -> bool {
         unsafe { HAS_ERROR }
     }
-
-    pub fn reset() {
-        unsafe { HAS_ERROR = false }
-    }
 }
 
 #[derive(Debug, Clone)]

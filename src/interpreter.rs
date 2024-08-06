@@ -9,17 +9,17 @@ impl Interpreter {
         Self { environment: Box::new(Environment::new()) }
     }
     
-    pub fn execute_expr(&mut self, expr: &Box<Expr>) -> Value {
+    pub fn evaluate_expr(&mut self, expr: &Box<Expr>) -> Value {
         expr.accept(self)
     }
 
-    pub fn execute_stmt(&mut self, stmt: &Box<Stmt>) -> (){
+    pub fn evaluate_stmt(&mut self, stmt: &Box<Stmt>) -> (){
         stmt.accept(self)
     }
 
     fn is_truthy(&self, value: Value) -> bool {
         match value {
-            Value::Nil => false,
+            Value::Nil | Value::Unitialized => false,
             Value::Bool(v) => v,
             _ => true,
 
@@ -37,7 +37,7 @@ impl Interpreter {
         self.environment = environment;
 
         for stmt in statements{
-            self.execute_stmt(stmt)
+            self.evaluate_stmt(stmt)
         }
 
         self.environment = previous
@@ -48,20 +48,32 @@ impl StmtVisitor<()> for Interpreter {
     fn visit(&mut self, stmt: &Stmt) -> () {
         match stmt {
             Stmt::Print { expression } => {
-                let value = self.execute_expr(expression);
+                let value = self.evaluate_expr(expression);
                 println!("{}", value.interp_to_string())
             },
             Stmt::Expression { expression } => {
-                self.execute_expr(expression);
+                self.evaluate_expr(expression);
             },
             Stmt::Var { name, initializer } => {
-                let value = self.execute_expr(initializer);
+                let value = self.evaluate_expr(initializer);
                 self.environment.define(name, value)
             },
             Stmt::Block { statements } => {
                 self.execute_block(statements, 
                     Box::new(Environment::new_enclosing(self.environment.clone())))
             },
+            Stmt::If { condition, then_branch, else_branch } => {
+                let condition_result = self.evaluate_expr(condition);
+
+                if self.is_truthy(condition_result){
+                    self.evaluate_stmt(then_branch)
+                } else {
+                    match else_branch {
+                        Some(branch) => self.evaluate_stmt(branch),
+                        None => (),
+                    }
+                }
+            }
             _ => panic!("Statement not defined!")
         }
     }
@@ -71,15 +83,15 @@ impl ExprVisitor<Value> for Interpreter {
     fn visit(&mut self, expr: &Expr) -> Value {
         match expr {
             Expr::Assign { name, value } => {
-                let value = self.execute_expr(value);
+                let value = self.evaluate_expr(value);
                 self.environment.assign(name, value.clone());
                 return value;
             },
             Expr::Variable { name } => self.environment.get(name.clone()),
             Expr::Literal { value } => value.clone(),
-            Expr::Grouping { expression } => self.execute_expr(expression),
+            Expr::Grouping { expression } => self.evaluate_expr(expression),
             Expr::Unary { operator, right } => {
-                let right = self.execute_expr(right);
+                let right = self.evaluate_expr(right);
 
                 match operator.token_type {
                     TokenType::Bang => {
@@ -93,8 +105,8 @@ impl ExprVisitor<Value> for Interpreter {
                 }
             },
             Expr::Binary { left, operator, right } => {
-                let left = self.execute_expr(left);
-                let right = self.execute_expr(right);
+                let left = self.evaluate_expr(left);
+                let right = self.evaluate_expr(right);
 
                 match (left, right) {
                     (Value::String(str1), Value::String(str2)) => {

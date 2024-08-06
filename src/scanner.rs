@@ -49,25 +49,28 @@ impl Scanner{
         self.current >= self.source.len()
     }
 
-    fn advance(&mut self) -> char{
+    fn advance(&mut self) -> char {
         let c = self.source.char_at(self.current);
-        self.current+=1;
+
+        self.current += 1;
+
         c
     }
 
-    fn get_current_char(&self) -> char{
+    fn get_current_char(&self) -> char {
         self.source.char_at(self.current)
     }
 
-    fn peek(&self) -> char{
+    fn peek(&self) -> char {
         if self.is_end() {return '\0';}
         self.get_current_char()
     }
 
-    fn peek_next(&self) -> char{
+    fn peek_next(&self) -> char {
         if self.current + 1 >= self.source.len() {
             return '\0';
         }
+
         self.source.char_at(self.current + 1)
     }
 
@@ -150,16 +153,16 @@ impl Scanner{
             '\r' => {}
             '\t' => {}
             '\n' => {self.line+=1}
-            '"' => {self.string()}
+            '"' => {self.string()},
             any => {
                 if any.is_digit(10){
                     self.number();
                 }
-                else if c.is_alpha(){
+                else if any.is_alpha(){
                     self.identifier();
                 }
                 else{
-                    let message = format!("Unexpected character: {}", c);
+                    let message = format!("Unexpected character: {}", any);
                     ErrorHandler::error(self.line, message);
                 }
             }

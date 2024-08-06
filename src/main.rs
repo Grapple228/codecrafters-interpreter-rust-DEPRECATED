@@ -11,9 +11,7 @@ mod ast_printer;
 mod interpreter;
 mod environment;
 
-use std::env;
-use std::fs;
-use std::io::{self, Write};
+use std::{env, fs, io::{self, Write}};
 use ast_printer::AstPrinter;
 use error::ErrorHandler;
 use interpreter::Interpreter;
@@ -21,7 +19,8 @@ use parser::Parser;
 use scanner::Scanner;
 use statement::Stmt;
 
-fn read_file(filename: &String) -> String{
+
+fn read_file(filename: &String) -> String {
     fs::read_to_string(filename).unwrap_or_else(|_| {
         writeln!(io::stderr(), "Failed to read file {}", filename).unwrap();
         String::new()
@@ -87,8 +86,8 @@ fn evaluate(filename: &String) {
 
         match expr {
             Stmt::Expression { expression } => {
-                let value = interpreter.execute_expr(expression);
-
+                let value = interpreter.evaluate_expr(expression);
+                
                 if ErrorHandler::had_error(){
                     std::process::exit(65)
                 }
@@ -103,7 +102,7 @@ fn evaluate(filename: &String) {
     
     // If statements
     for stmt in stmts.iter(){
-        _ = interpreter.execute_stmt(&stmt);
+        _ = interpreter.evaluate_stmt(&stmt);
     } 
 }
 
