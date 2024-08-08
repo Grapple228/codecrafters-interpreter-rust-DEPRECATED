@@ -19,6 +19,55 @@ impl Parser {
         self.assignment()
     }
 
+    fn assignment(&mut self) -> Result<Box<Expr>, ParserError> {
+        let expr = self.or();
+
+        if self.matching(&vec![TokenType::Equal]){
+            let equals = &self.previous().clone();
+            let value = self.assignment()?;
+
+            match expr.as_ref() {
+                Ok(ok) => {
+                    match ok.as_ref() {
+                        Expr::Variable { name } => {
+                            return Expr::Assign { name: name.clone(), value }.wrap()
+                        },
+                        _ => {
+                            self.error(equals.clone(), String::from("Invalid assignment target."));
+                        }
+                    }
+                },
+                Err(e) => return Err(e.clone())
+            }
+        }
+
+        expr
+    }
+
+    fn or(&mut self) -> Result<Box<Expr>, ParserError> {
+        let mut expr = self.and();
+
+        while self.matching(&vec![TokenType::Or]) {
+            let operator = self.previous().clone();
+            let right = self.and()?;
+            expr = Expr::Logical { left: expr?, operator, right }.wrap();
+        }
+
+        expr
+    }
+
+    fn and(&mut self) -> Result<Box<Expr>, ParserError> {
+        let mut expr = self.equality();
+        
+        while self.matching(&vec![TokenType::And]) {
+            let operator = self.previous().clone();
+            let right = self.equality()?;
+            expr = Expr::Logical { left: expr?, operator, right }.wrap();
+        }
+
+        expr
+    }
+
     fn equality(&mut self) -> Result<Box<Expr>, ParserError> {
         let mut expr = self.comparsion();
 
@@ -28,9 +77,9 @@ impl Parser {
 
         while self.matching(&tokens) {
             let operator = self.previous().clone();
-            let right = self.comparsion();
+            let right = self.comparsion()?;
 
-            expr = Expr::Binary { left: expr?, operator, right: right?}.wrap()
+            expr = Expr::Binary { left: expr?, operator, right}.wrap()
         }
 
         return expr;
@@ -137,31 +186,6 @@ impl Parser {
             Ok(expr) => Some(expr),
             Err(_) => None,
         }
-    }
-
-    fn assignment(&mut self) -> Result<Box<Expr>, ParserError> {
-        let expr = self.equality();
-
-        if self.matching(&vec![TokenType::Equal]){
-            let equals = &self.previous().clone();
-            let value = self.assignment();
-
-            match expr.as_ref() {
-                Ok(ok) => {
-                    match ok.as_ref() {
-                        Expr::Variable { name } => {
-                            return Expr::Assign { name: name.clone(), value: value? }.wrap()
-                        },
-                        _ => {
-                            self.error(equals.clone(), String::from("Invalid assignment target."));
-                        }
-                    }
-                },
-                Err(e) => return Err(e.clone())
-            }
-        }
-
-        expr
     }
 
     fn var_declaration(&mut self) -> Result<Box<Stmt>, ParserError> {

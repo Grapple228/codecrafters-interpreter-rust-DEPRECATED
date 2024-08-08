@@ -17,10 +17,10 @@ impl Interpreter {
         stmt.accept(self)
     }
 
-    fn is_truthy(&self, value: Value) -> bool {
+    fn is_truthy(&self, value: &Value) -> bool {
         match value {
             Value::Nil | Value::Unitialized => false,
-            Value::Bool(v) => v,
+            Value::Bool(v) => v.clone(),
             _ => true,
 
         }
@@ -65,7 +65,7 @@ impl StmtVisitor<()> for Interpreter {
             Stmt::If { condition, then_branch, else_branch } => {
                 let condition_result = self.evaluate_expr(condition);
 
-                if self.is_truthy(condition_result){
+                if self.is_truthy(&condition_result){
                     self.evaluate_stmt(then_branch)
                 } else {
                     match else_branch {
@@ -87,6 +87,21 @@ impl ExprVisitor<Value> for Interpreter {
                 self.environment.assign(name, value.clone());
                 return value;
             },
+            Expr::Logical { left, operator, right } => {
+                let left = self.evaluate_expr(left);
+
+                if operator.token_type == TokenType::Or{
+                    if self.is_truthy(&left){
+                        return left;
+                    }
+                } else {
+                    if !self.is_truthy(&left){
+                        return left;
+                    }
+                }
+
+                self.evaluate_expr(right)
+            },
             Expr::Variable { name } => self.environment.get(name.clone()),
             Expr::Literal { value } => value.clone(),
             Expr::Grouping { expression } => self.evaluate_expr(expression),
@@ -95,7 +110,7 @@ impl ExprVisitor<Value> for Interpreter {
 
                 match operator.token_type {
                     TokenType::Bang => {
-                        Value::Bool(!self.is_truthy(right))
+                        Value::Bool(!self.is_truthy(&right))
                     },
                     TokenType::Minus => match right{
                         Value::Number(num) => Value::Number(-num),
