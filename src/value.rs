@@ -10,6 +10,14 @@ pub enum Value{
 }
 
 impl Value{
+    pub fn is_thuthy(self) -> bool {
+        match self {
+            Value::Nil | Value::Unitialized => false,
+            Value::Bool(v) => v.clone(),
+            _ => true,
+        }
+    }
+
     pub fn is_equal(&self, other: Value) -> bool{
         match (self, other) {
             (Value::Nil, Value::Nil) => true,

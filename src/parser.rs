@@ -246,22 +246,11 @@ impl Parser {
         stmts
     }
 
-    fn if_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
-        _ = self.consume(&TokenType::LeftParen, String::from("Expect '(' after 'if'."));
-        let condition = self.expression();
-        _ = self.consume(&TokenType::RightParen, String::from("Expect ')' after if condition."));
-
-        let then_branch = self.statement();
-        let mut else_branch = None;
-
-        if self.matching(&vec![TokenType::Else]){
-            else_branch = Some(self.statement()?);
-        }
-
-        Stmt::If { condition:condition?, then_branch: then_branch?, else_branch }.wrap()
-    }
-
     fn statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+        if self.matching(&vec![TokenType::For]){
+            return self.for_statement();
+        }
+        
         if self.matching(&vec![TokenType::If]){
             return self.if_statement();
         }
@@ -270,12 +259,93 @@ impl Parser {
             return self.print_statement();
         }
 
+        if self.matching(&vec![TokenType::While]){
+            return self.while_statement();
+        }
+
         if self.matching(&vec![TokenType::LeftBrace]){
             self.is_expression = false;
             return Stmt::Block { statements: self.block() }.wrap();
         }
 
         self.expression_statement()
+    }
+
+    fn if_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+        _ = self.consume(&TokenType::LeftParen, String::from("Expect '(' after 'if'."));
+        let condition = self.expression();
+        _ = self.consume(&TokenType::RightParen, String::from("Expect ')' after condition."));
+
+        let then_branch = self.statement();
+        let else_branch = if self.matching(&vec![TokenType::Else]){
+            Some(self.statement()?)
+        } else {
+            None
+        };
+
+        Stmt::If { condition:condition?, then_branch: then_branch?, else_branch }.wrap()
+    }
+
+    fn for_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+        _ = self.consume(&TokenType::LeftParen, String::from("Expect '(' after 'for'."));
+        
+        let initializer = if self.matching(&vec![TokenType::Semicolon]){
+            None
+        } else if self.matching(&vec![TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+        
+        let mut condition: Option<Box<Expr>> = None;
+        if !self.check(&TokenType::Semicolon){
+            condition = Some(self.expression()?);
+        };
+        
+        _ = self.consume(&TokenType::Semicolon, String::from("Expect ';' after loop condition."));
+        
+        let mut increment: Option<Box<Expr>> = None;
+        if !self.check(&TokenType::RightParen){
+            increment = Some(self.expression()?);
+        };
+        
+        _ = self.consume(&TokenType::RightParen, String::from("Expect ')' after for clauses."));
+
+        let mut body = self.statement()?;
+
+        match increment {
+            Some(increment) => {
+                let statements = vec![body, Box::new(Stmt::Expression { expression: increment })];
+                body = Box::new(Stmt::Block { statements });
+            },
+            None => {},
+        }
+
+        if condition.is_none(){
+            condition = Some(Box::new(Expr::Literal { value: Value::Bool(true) }));
+        }
+
+        body = Box::new(Stmt::While { condition: condition.unwrap(), body });
+
+        match initializer{
+            Some(initializer) => {
+                let statements = vec![initializer, body];
+                body = Box::new(Stmt::Block { statements });
+            },
+            None => {},
+        }
+
+        return body.wrap();
+
+    }
+
+    fn while_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+        _ = self.consume(&TokenType::LeftParen, String::from("Expect '(' after 'while'."));
+        let condition = self.expression();
+        _ = self.consume(&TokenType::RightParen, String::from("Expect ')' after condition."));
+        let body = self.statement();
+        
+        Stmt::While { condition: condition?, body: body? }.wrap()
     }
 
     fn expression_statement(&mut self) -> Result<Box<Stmt>, ParserError>{

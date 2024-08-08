@@ -1,20 +1,20 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{error::ErrorHandler, token::Token, value::Value};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Environment{
-    values: HashMap<String, Value>,
-    enclosing: Option<Box<Environment>>
+    pub values: HashMap<String, Value>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
     pub fn new() -> Self {
         Self { values: HashMap::new(), 
-            enclosing: None }
+            enclosing: None}
     }
 
-    pub fn new_enclosing(enclosing: Box<Environment>) -> Self{
+    pub fn new_enclosing(enclosing: Rc<RefCell<Environment>>) -> Self{
         Self { values: HashMap::new(), 
             enclosing: Some(enclosing)}
     }
@@ -33,19 +33,18 @@ impl Environment {
         let lexeme = &name.lexeme;
 
         if self.values.contains_key(&lexeme.clone()){
-            self.values.insert(lexeme.clone(), value);
+            self.values.insert(lexeme.clone(), value.clone());
             return;
         }
-        
-        match self.enclosing.as_mut() {
+
+        match self.enclosing.as_deref() {
             Some(enclosing ) => {
-                enclosing.as_mut().assign(name, value)
+                enclosing.borrow_mut().assign(name, value.clone());
             },
             None => {
                 ErrorHandler::runtime_error(name, format!("Undefined variable '{}'.", lexeme));
             },
         }
-
     }
 
     pub fn get(&self, name: Token) -> Value {
@@ -59,17 +58,18 @@ impl Environment {
                 return Value::Unitialized
             }
 
-            return value.clone();
+            return value.to_owned();
         } 
 
-        return match &self.enclosing{
+        let value = match self.enclosing.as_deref(){
             Some(enclosing ) => {
-                enclosing.get(name)
+                enclosing.borrow().get(name)
             },
             None => {
                 ErrorHandler::runtime_error(&name, format!("Undefined variable '{}'.", key));
                 Value::Nil
             },
-        }
+        };
+        return value;
     }
 }

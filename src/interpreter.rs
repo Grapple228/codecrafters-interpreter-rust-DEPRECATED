@@ -1,12 +1,14 @@
-use crate::{environment::Environment, error::ErrorHandler, expression::{Expr, ExprVisitor}, statement::{Stmt, StmtVisitor}, token::{Token, TokenType}, value::Value};
+use std::{cell::RefCell, rc::Rc};
+
+use crate::{environment::Environment, error::ErrorHandler, expression::{Expr, ExprVisitor}, statement::{Stmt, StmtVisitor}, token::{Token, TokenType}, value::{self, Value}};
 
 pub struct Interpreter{
-    environment: Box<Environment>
+    environment: Rc<RefCell<Environment>>
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self { environment: Box::new(Environment::new()) }
+        Self { environment: Rc::new(RefCell::new(Environment::new())) }
     }
     
     pub fn evaluate_expr(&mut self, expr: &Box<Expr>) -> Value {
@@ -17,21 +19,12 @@ impl Interpreter {
         stmt.accept(self)
     }
 
-    fn is_truthy(&self, value: &Value) -> bool {
-        match value {
-            Value::Nil | Value::Unitialized => false,
-            Value::Bool(v) => v.clone(),
-            _ => true,
-
-        }
-    }
-
     fn runtime_error(operator: &Token, message: &'static str) -> Value{
         ErrorHandler::runtime_error(operator, String::from(message));
         Value::Nil
     }
 
-    fn execute_block(&mut self, statements: &Vec<Box<Stmt>>, environment: Box<Environment>){
+    fn execute_block(&mut self, statements: &Vec<Box<Stmt>>, environment: Rc<RefCell<Environment>>){
         let previous = self.environment.clone();
 
         self.environment = environment;
@@ -40,7 +33,7 @@ impl Interpreter {
             self.evaluate_stmt(stmt)
         }
 
-        self.environment = previous
+        self.environment = previous;
     }
 }
 
@@ -56,16 +49,23 @@ impl StmtVisitor<()> for Interpreter {
             },
             Stmt::Var { name, initializer } => {
                 let value = self.evaluate_expr(initializer);
-                self.environment.define(name, value)
+                self.environment.borrow_mut().define(name, value)
             },
             Stmt::Block { statements } => {
+                let new_enw = Environment::new_enclosing(self.environment.to_owned());
+
                 self.execute_block(statements, 
-                    Box::new(Environment::new_enclosing(self.environment.clone())))
+                    Rc::new(RefCell::new(new_enw)))
+            },
+            Stmt::While { condition, body } => {
+                while self.evaluate_expr(condition).is_thuthy() {
+                    self.evaluate_stmt(body);
+                }
             },
             Stmt::If { condition, then_branch, else_branch } => {
                 let condition_result = self.evaluate_expr(condition);
 
-                if self.is_truthy(&condition_result){
+                if condition_result.is_thuthy(){
                     self.evaluate_stmt(then_branch)
                 } else {
                     match else_branch {
@@ -84,25 +84,27 @@ impl ExprVisitor<Value> for Interpreter {
         match expr {
             Expr::Assign { name, value } => {
                 let value = self.evaluate_expr(value);
-                self.environment.assign(name, value.clone());
+                self.environment.borrow_mut().assign(name, value.clone());
                 return value;
             },
             Expr::Logical { left, operator, right } => {
                 let left = self.evaluate_expr(left);
 
                 if operator.token_type == TokenType::Or{
-                    if self.is_truthy(&left){
+                    if left.clone().is_thuthy() {
                         return left;
                     }
                 } else {
-                    if !self.is_truthy(&left){
+                    if !left.clone().is_thuthy(){
                         return left;
                     }
                 }
 
                 self.evaluate_expr(right)
             },
-            Expr::Variable { name } => self.environment.get(name.clone()),
+            Expr::Variable { name } => {
+                self.environment.borrow_mut().get(name.clone())
+            },
             Expr::Literal { value } => value.clone(),
             Expr::Grouping { expression } => self.evaluate_expr(expression),
             Expr::Unary { operator, right } => {
@@ -110,7 +112,7 @@ impl ExprVisitor<Value> for Interpreter {
 
                 match operator.token_type {
                     TokenType::Bang => {
-                        Value::Bool(!self.is_truthy(&right))
+                        Value::Bool(!right.is_thuthy())
                     },
                     TokenType::Minus => match right{
                         Value::Number(num) => Value::Number(-num),
