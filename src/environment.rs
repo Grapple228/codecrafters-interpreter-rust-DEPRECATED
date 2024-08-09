@@ -1,11 +1,12 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::{error::ErrorHandler, token::Token, value::Value};
+pub type MutEnv = Rc<RefCell<Environment>>;
+use crate::{error::ErrorHandler, object::Object, token::Token};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Environment{
-    pub values: HashMap<String, Value>,
-    enclosing: Option<Rc<RefCell<Environment>>>,
+    pub values: HashMap<String, Object>,
+    enclosing: Option<MutEnv>,
 }
 
 impl Environment {
@@ -14,12 +15,12 @@ impl Environment {
             enclosing: None}
     }
 
-    pub fn new_enclosing(enclosing: Rc<RefCell<Environment>>) -> Self{
+    pub fn new_enclosing(enclosing: MutEnv) -> Self{
         Self { values: HashMap::new(), 
             enclosing: Some(enclosing)}
     }
 
-    pub fn define(&mut self, name: &Token, value: Value) {
+    pub fn define(&mut self, name: &Token, value: Object) {
         let lexeme = &name.lexeme;
 
         if self.values.contains_key(lexeme){
@@ -29,7 +30,7 @@ impl Environment {
         self.values.insert(lexeme.clone(), value);
     }
 
-    pub fn assign(&mut self, name: &Token, value: Value) {
+    pub fn assign(&mut self, name: &Token, value: Object) {
         let lexeme = &name.lexeme;
 
         if self.values.contains_key(&lexeme.clone()){
@@ -47,15 +48,15 @@ impl Environment {
         }
     }
 
-    pub fn get(&self, name: Token) -> Value {
+    pub fn get(&self, name: Token) -> Object {
         let key = name.lexeme.clone();
 
         if self.values.contains_key(&key){
             let value = self.values.get(&key).unwrap();
 
-            if value.is_equal(Value::Unitialized){
+            if value.is_equal(Object::Unitialized){
                 ErrorHandler::runtime_error(&name, format!("Variable '{}' has not been initialized or assigned to.", key));
-                return Value::Unitialized
+                return Object::Unitialized
             }
 
             return value.to_owned();
@@ -67,7 +68,7 @@ impl Environment {
             },
             None => {
                 ErrorHandler::runtime_error(&name, format!("Undefined variable '{}'.", key));
-                Value::Nil
+                Object::Nil
             },
         };
         return value;

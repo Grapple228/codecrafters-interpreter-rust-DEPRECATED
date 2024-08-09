@@ -1,6 +1,8 @@
+use std::fmt::Display;
+
 use crate::{error::ParserError, expression::Expr, token::Token};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Stmt{
     Block{
         statements: Vec<Box<Stmt>>
@@ -47,6 +49,12 @@ impl Stmt {
 
     pub fn accept<R>(&self, visitor: &mut impl StmtVisitor<R>) -> () {
         visitor.visit(self)
+    }
+}
+
+impl Display for Stmt {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self)
     }
 }
 

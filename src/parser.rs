@@ -1,4 +1,6 @@
-use crate::{error::{ErrorHandler, ParserError}, expression::Expr, statement::Stmt, token::{Token, TokenType}, value::Value};
+use crate::{error::{ErrorHandler, ParserError}, expression::Expr, object::Object, statement::Stmt, token::{Token, TokenType}};
+
+pub type MyResult<T> = std::result::Result<Box<T>, ParserError>;
 
 pub struct Parser{
     tokens: Vec<Token>,
@@ -15,11 +17,11 @@ impl Parser {
         self.is_expression
     }
 
-    fn expression(&mut self) -> Result<Box<Expr>, ParserError> {
+    fn expression(&mut self) -> MyResult<Expr> {
         self.assignment()
     }
 
-    fn assignment(&mut self) -> Result<Box<Expr>, ParserError> {
+    fn assignment(&mut self) -> MyResult<Expr> {
         let expr = self.or();
 
         if self.matching(&vec![TokenType::Equal]){
@@ -44,7 +46,7 @@ impl Parser {
         expr
     }
 
-    fn or(&mut self) -> Result<Box<Expr>, ParserError> {
+    fn or(&mut self) -> MyResult<Expr> {
         let mut expr = self.and();
 
         while self.matching(&vec![TokenType::Or]) {
@@ -56,7 +58,7 @@ impl Parser {
         expr
     }
 
-    fn and(&mut self) -> Result<Box<Expr>, ParserError> {
+    fn and(&mut self) -> MyResult<Expr> {
         let mut expr = self.equality();
         
         while self.matching(&vec![TokenType::And]) {
@@ -68,7 +70,7 @@ impl Parser {
         expr
     }
 
-    fn equality(&mut self) -> Result<Box<Expr>, ParserError> {
+    fn equality(&mut self) -> MyResult<Expr> {
         let mut expr = self.comparsion();
 
         let tokens = vec![
@@ -85,7 +87,7 @@ impl Parser {
         return expr;
     }
 
-    fn comparsion(&mut self) -> Result<Box<Expr>, ParserError> {
+    fn comparsion(&mut self) -> MyResult<Expr> {
         let mut expr = self.term();
 
         let tokens = vec![
@@ -104,7 +106,7 @@ impl Parser {
         return expr;
     }
 
-    fn term(&mut self) -> Result<Box<Expr>, ParserError> {
+    fn term(&mut self) -> MyResult<Expr> {
         let mut expr = self.factor();
 
         let tokens = vec![
@@ -121,7 +123,7 @@ impl Parser {
         return expr;
     }
 
-    fn factor(&mut self) -> Result<Box<Expr>, ParserError> {
+    fn factor(&mut self) -> MyResult<Expr> {
         let mut expr = self.unary();
 
         let tokens = vec![
@@ -138,7 +140,7 @@ impl Parser {
         return expr;
     }
 
-    fn unary(&mut self) -> Result<Box<Expr>, ParserError> {
+    fn unary(&mut self) -> MyResult<Expr> {
         let tokens = vec![
             TokenType::Bang,
             TokenType::Minus];
@@ -153,15 +155,15 @@ impl Parser {
         return self.primary();
     }
 
-    fn primary(&mut self) -> Result<Box<Expr>, ParserError> {
+    fn primary(&mut self) -> MyResult<Expr> {
         if self.matching(&vec![TokenType::False]){
-            return Expr::Literal { value: Value::Bool(false) }.wrap()
+            return Expr::Literal { value: Object::Boolean(false) }.wrap()
         }
         if self.matching(&vec![TokenType::True]){
-            return Expr::Literal { value: Value::Bool(true) }.wrap()
+            return Expr::Literal { value: Object::Boolean(true) }.wrap()
         }
         if self.matching(&vec![TokenType::Nil]){
-            return Expr::Literal { value: Value::Nil }.wrap()
+            return Expr::Literal { value: Object::Nil }.wrap()
         }
         if self.matching(&vec![TokenType::Number,
                                      TokenType::String]) {
@@ -188,12 +190,12 @@ impl Parser {
         }
     }
 
-    fn var_declaration(&mut self) -> Result<Box<Stmt>, ParserError> {
+    fn var_declaration(&mut self) -> MyResult<Stmt> {
         self.is_expression = false;
 
         let name = &self.consume(&TokenType::Identifier, String::from("Expect variable name.")).unwrap().clone();
 
-        let mut initializer = Expr::Literal { value: Value::Unitialized }.wrap();
+        let mut initializer = Expr::Literal { value: Object::Unitialized }.wrap();
 
         if self.matching(&vec![TokenType::Equal]){
             initializer = self.expression();
@@ -204,7 +206,7 @@ impl Parser {
         Stmt::Var { name: name.clone(), initializer: initializer? }.wrap()
     }
 
-    fn declaration(&mut self) -> Result<Box<Stmt>, ParserError> {
+    fn declaration(&mut self) -> MyResult<Stmt> {
         let result = if self.matching(&vec![TokenType::Var]){
             self.var_declaration()
         } else {
@@ -246,20 +248,24 @@ impl Parser {
         stmts
     }
 
-    fn statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+    fn statement(&mut self) -> MyResult<Stmt> {
         if self.matching(&vec![TokenType::For]){
+            self.is_expression = false;
             return self.for_statement();
         }
         
         if self.matching(&vec![TokenType::If]){
+            self.is_expression = false;
             return self.if_statement();
         }
         
         if self.matching(&vec![TokenType::Print]){
+            self.is_expression = false;
             return self.print_statement();
         }
 
         if self.matching(&vec![TokenType::While]){
+            self.is_expression = false;
             return self.while_statement();
         }
 
@@ -271,7 +277,7 @@ impl Parser {
         self.expression_statement()
     }
 
-    fn if_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+    fn if_statement(&mut self) -> MyResult<Stmt> {
         _ = self.consume(&TokenType::LeftParen, String::from("Expect '(' after 'if'."));
         let condition = self.expression();
         _ = self.consume(&TokenType::RightParen, String::from("Expect ')' after condition."));
@@ -286,7 +292,7 @@ impl Parser {
         Stmt::If { condition:condition?, then_branch: then_branch?, else_branch }.wrap()
     }
 
-    fn for_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+    fn for_statement(&mut self) -> MyResult<Stmt> {
         _ = self.consume(&TokenType::LeftParen, String::from("Expect '(' after 'for'."));
         
         let initializer = if self.matching(&vec![TokenType::Semicolon]){
@@ -322,7 +328,7 @@ impl Parser {
         }
 
         if condition.is_none(){
-            condition = Some(Box::new(Expr::Literal { value: Value::Bool(true) }));
+            condition = Some(Box::new(Expr::Literal { value: Object::Boolean(true) }));
         }
 
         body = Box::new(Stmt::While { condition: condition.unwrap(), body });
@@ -339,7 +345,7 @@ impl Parser {
 
     }
 
-    fn while_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+    fn while_statement(&mut self) -> MyResult<Stmt> {
         _ = self.consume(&TokenType::LeftParen, String::from("Expect '(' after 'while'."));
         let condition = self.expression();
         _ = self.consume(&TokenType::RightParen, String::from("Expect ')' after condition."));
@@ -348,7 +354,7 @@ impl Parser {
         Stmt::While { condition: condition?, body: body? }.wrap()
     }
 
-    fn expression_statement(&mut self) -> Result<Box<Stmt>, ParserError>{
+    fn expression_statement(&mut self) -> MyResult<Stmt> {
         let value = self.expression();
         if !self.is_expression{
             _ = self.consume(&TokenType::Semicolon, String::from("Expect ';' after expression."));
@@ -356,7 +362,7 @@ impl Parser {
         Stmt::Expression { expression: value? }.wrap()
     }
 
-    fn print_statement(&mut self) -> Result<Box<Stmt>, ParserError> {
+    fn print_statement(&mut self) -> MyResult<Stmt> {
         self.is_expression = false;
         let value = self.expression();
         _ = self.consume(&TokenType::Semicolon, String::from("Expect ';' after value."));

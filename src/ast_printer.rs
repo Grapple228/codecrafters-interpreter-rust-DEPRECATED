@@ -1,5 +1,4 @@
-use crate::expression::{Expr, ExprVisitor};
-use crate::value::Value;
+use crate::{expression::{Expr, ExprVisitor}, object::Object};
 pub struct AstPrinter{}
 
 impl AstPrinter {
@@ -38,7 +37,7 @@ impl ExprVisitor<String> for AstPrinter {
                                       vec![expression])
                 },
                 Expr::Literal { value } => {
-                    if *value == Value::Nil{
+                    if *value == Object::Nil{
                         return String::from("nil");
                     }
                     value.to_string()

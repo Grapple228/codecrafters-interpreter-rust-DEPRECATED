@@ -4,7 +4,7 @@ mod char_extensions;
 mod string_extensions;
 mod error;
 mod expression;
-mod value;
+mod object;
 mod statement;
 mod parser;
 mod ast_printer;
@@ -71,6 +71,8 @@ fn evaluate(filename: &String) {
     let mut scanner = Scanner::new(file_contents);
     scanner.scan_tokens();
 
+    println!("Tokens: {:?}", scanner.tokens);
+
     let mut parser = Parser::new(scanner.tokens);
     let stmts = parser.parse_stmt();
 
@@ -92,7 +94,7 @@ fn evaluate(filename: &String) {
                     std::process::exit(65)
                 }
     
-                println!("{}", value.interp_to_string());
+                println!("{}", value.to_string());
                 return;
             },
             _ => {}

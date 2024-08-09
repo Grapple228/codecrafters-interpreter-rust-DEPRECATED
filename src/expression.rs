@@ -1,7 +1,14 @@
-use crate::{error::ParserError, token::Token, value::Value};
+use std::fmt::Display;
 
-#[derive(Debug)]
+use crate::{error::ParserError, token::Token, object::Object};
+
+pub type MyResult<T> = std::result::Result<Box<T>, ParserError>;
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    Number(f64),
+    Boolean(bool),
+    String(String),
     Assign{
         name: Token,
         value: Box<Expr>
@@ -24,7 +31,7 @@ pub enum Expr {
         expression: Box<Expr>
     },
     Literal{
-        value: Value
+        value: Object
     },
     Logical{
         left: Box<Expr>,
@@ -52,8 +59,14 @@ pub enum Expr {
     },
 }
 
+impl Display for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
 impl Expr {
-    pub fn wrap(self) -> Result<Box<Expr>, ParserError>{
+    pub fn wrap(self) -> MyResult<Expr>{
         Ok(Box::new(self))
     }
 

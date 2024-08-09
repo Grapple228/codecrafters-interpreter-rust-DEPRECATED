@@ -1,4 +1,4 @@
-use crate::{char_extensions::CharExtensions, error::ErrorHandler, string_extensions::StringExtensions, token::{Token, TokenType}, value::Value};
+use crate::{char_extensions::CharExtensions, error::ErrorHandler, object::Object, string_extensions::StringExtensions, token::{Token, TokenType}};
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -92,10 +92,10 @@ impl Scanner{
     }
 
     pub fn add_token(&mut self, token_type: TokenType) {
-        self.add_token_with_value(token_type, Value::Nil)
+        self.add_token_with_value(token_type, Object::Nil)
     }
 
-    fn add_token_with_value(&mut self, token_type: TokenType, literal: Value) {
+    fn add_token_with_value(&mut self, token_type: TokenType, literal: Object) {
         let text: String = self.get_value();
 
         self.tokens.push(Token { token_type, lexeme: text, literal, line: self.line})
@@ -199,7 +199,7 @@ impl Scanner{
         }
 
         let value = self.get_value();
-        let literal = Value::Number(value.parse().unwrap_or_default());
+        let literal = Object::Number(value.parse().unwrap_or_default());
 
         self.add_token_with_value(TokenType::Number, literal);
     }
@@ -220,6 +220,6 @@ impl Scanner{
         self.advance();
 
         let value = self.source.substring(self.start + 1, self.current - 1);
-        self.add_token_with_value(TokenType::String, Value::String(value));
+        self.add_token_with_value(TokenType::String, Object::String(value));
     }
 }
