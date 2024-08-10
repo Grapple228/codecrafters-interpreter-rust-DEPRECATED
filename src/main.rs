@@ -9,6 +9,7 @@ mod parser;
 mod ast_printer;
 mod interpreter;
 mod environment;
+mod returner;
 
 use std::{env, fs, io::{self, Write}};
 use ast_printer::AstPrinter;
@@ -51,7 +52,7 @@ fn parse(filename: &String){
     let mut scanner = Scanner::new(file_contents);
     scanner.scan_tokens();
 
-    let mut parser = Parser::new(scanner.tokens);
+    let mut parser = Parser::new(scanner.tokens.into_boxed_slice());
     let expr = parser.parse_expr();
 
     if ErrorHandler::had_error(){
@@ -70,15 +71,17 @@ fn evaluate(filename: &String) {
     let mut scanner = Scanner::new(file_contents);
     scanner.scan_tokens();
 
-    let mut parser = Parser::new(scanner.tokens);
+    let mut parser = Parser::new(scanner.tokens.into_boxed_slice());
     let stmts = parser.parse_stmt();
-
+    
     if ErrorHandler::had_error(){
         std::process::exit(70)
     }
+    
+    //println!("Tokens:\n{:?}", scanner.tokens);
 
     let mut interpreter = Interpreter::new();
-
+    
     // If expression check
     if parser.is_expression() && stmts.len() >= 1{
         let expr = stmts.get(0).unwrap().as_ref();
@@ -96,9 +99,10 @@ fn evaluate(filename: &String) {
             },
             _ => {}
         }
-        
     }
     
+    //println!("Statements:\n{:?}", stmts);
+
     // If statements
     for stmt in stmts.iter(){
         _ = interpreter.evaluate_stmt(&stmt);

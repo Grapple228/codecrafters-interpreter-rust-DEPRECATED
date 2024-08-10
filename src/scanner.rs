@@ -92,10 +92,10 @@ impl Scanner{
     }
 
     pub fn add_token(&mut self, token_type: TokenType) {
-        self.add_token_with_value(token_type, Object::Nil)
+        self.add_token_with_value(token_type, Box::new(Object::Nil))
     }
 
-    fn add_token_with_value(&mut self, token_type: TokenType, literal: Object) {
+    fn add_token_with_value(&mut self, token_type: TokenType, literal: Box<Object>) {
         let text: String = self.get_value();
 
         self.tokens.push(Token { token_type, lexeme: text, literal, line: self.line})
@@ -199,7 +199,7 @@ impl Scanner{
         }
 
         let value = self.get_value();
-        let literal = Object::Number(value.parse().unwrap_or_default());
+        let literal = Box::new(Object::Number(value.parse().unwrap_or_default()));
 
         self.add_token_with_value(TokenType::Number, literal);
     }
@@ -220,6 +220,6 @@ impl Scanner{
         self.advance();
 
         let value = self.source.substring(self.start + 1, self.current - 1);
-        self.add_token_with_value(TokenType::String, Object::String(value));
+        self.add_token_with_value(TokenType::String, Box::new(Object::String(value)));
     }
 }

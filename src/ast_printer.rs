@@ -12,7 +12,7 @@ impl AstPrinter {
 }
 
 impl AstPrinter {
-    fn parenthesize(&mut self, name: String, expressions: Vec<&Box<Expr>>) -> String{
+    fn parenthesize(&mut self, name: String, expressions: Box<[&Box<Expr>]>) -> String{
         let mut builder = String::from("(");
         builder.push_str(&name);
         
@@ -30,20 +30,17 @@ impl ExprVisitor<String> for AstPrinter {
     fn visit(&mut self, expr: &Expr) -> String {
             match expr {
                 Expr::Binary { left, operator, right } => {
-                    self.parenthesize(operator.lexeme.clone(), vec![left, right])
+                    self.parenthesize(operator.lexeme.clone(), vec![left, right].into_boxed_slice())
                 },
                 Expr::Grouping { expression } => {
                     self.parenthesize(String::from("group"), 
-                                      vec![expression])
+                                      vec![expression].into_boxed_slice())
                 },
                 Expr::Literal { value } => {
-                    if *value == Object::Nil{
-                        return String::from("nil");
-                    }
                     value.to_string()
                 },
                 Expr::Unary { operator, right } => {
-                    self.parenthesize(operator.lexeme.clone(), vec![right])
+                    self.parenthesize(operator.lexeme.clone(), vec![right].into_boxed_slice())
                 },
                 _ => { todo!() }
             }

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{error::ParserError, token::Token, environment::Object};
+use crate::{environment::{BObject, Object}, error::ParserError, token::Token};
 
 pub type MyResult<T> = std::result::Result<Box<T>, ParserError>;
 
@@ -18,7 +18,7 @@ pub enum Expr {
     Call{
         callee: Box<Expr>,
         paren: Token,
-        arguments: Vec<Box<Expr>>
+        arguments: Box<[Box<Expr>]>
     },
     Get{
         object: Box<Expr>,
@@ -28,7 +28,7 @@ pub enum Expr {
         expression: Box<Expr>
     },
     Literal{
-        value: Object
+        value: BObject
     },
     Logical{
         left: Box<Expr>,

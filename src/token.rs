@@ -80,7 +80,7 @@ impl Display for TokenType{
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
-    pub literal: Object,
+    pub literal: Box<Object>,
     pub line: usize
 }
 
@@ -90,7 +90,7 @@ impl Token {
             line: 0,
             lexeme,
             token_type,
-            literal: Object::Nil
+            literal: Box::new(Object::Nil)
         }
     }
 
@@ -99,7 +99,7 @@ impl Token {
             token_type: TokenType::Eof,
             lexeme: String::new(),
             line,
-            literal: Object::Nil
+            literal: Box::new(Object::Nil)
         }
     }
 }

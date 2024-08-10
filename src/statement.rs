@@ -5,20 +5,20 @@ use crate::{error::ParserError, expression::Expr, token::Token};
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt{
     Block{
-        statements: Vec<Box<Stmt>>
+        statements: Box<[Box<Stmt>]>
     },
     Class{
         name: Token,
         superclass: Box<Expr>,
-        methods: Vec<Box<Stmt>>
+        methods: Box<[Box<Stmt>]>
     },
     Expression{
         expression: Box<Expr>
     },
     Function{
         name: Token,
-        params: Vec<Token>,
-        body: Vec<Box<Stmt>>
+        params: Box<[Token]>,
+        body: Box<[Box<Stmt>]>
     },
     If{
         condition: Box<Expr>,
@@ -30,7 +30,7 @@ pub enum Stmt{
     },
     Return{
         keyword: Token,
-        value: Box<Expr>
+        value: Option<Box<Expr>>
     },
     Var{
         name: Token,

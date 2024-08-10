@@ -1,27 +1,30 @@
 mod builtin;
 pub mod environment;
 
-use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::{cell::RefCell, fmt::Display, panic, rc::Rc};
 
 use environment::{Environment, MutEnv};
 
-use crate::{expression::Expr, interpreter::{self, Interpreter}, statement::Stmt, token::Token};
+use crate::{expression::Expr, interpreter::{self, Interpreter}, returner::Return, statement::Stmt, token::Token};
 
-pub type BuiltinSignature = fn(Vec<Object>) -> Object;
+pub type BObject = Box<Object>;
+pub type BuiltinSignature = fn(Box<[BObject]>) -> BObject;
+pub type Args = Box<[BObject]>;
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Object {
     Number(f64),
     Boolean(bool),
     String(String),
-    Array(Vec<Object>),
     Nil,
     Unitialized,
-    Return(Box<Object>),
+    Return(BObject),
     Function{
         name: Box<Token>,
-        params: Vec<Token>,
-        body: Vec<Box<Stmt>>
+        params: Box<[Token]>,
+        body: Box<[Box<Stmt>]>,
+        environment: MutEnv
     },
     Builtin(String, BuiltinSignature),
 }
@@ -62,11 +65,10 @@ impl Display for Object {
             Object::Number(i) => write!(f, "{}", i),
             Object::Boolean(b) => write!(f, "{}", b),
             Object::String(s) => write!(f, "{}", s),
-            Object::Array(a) => write!(f, "[{}]", csv_str(a)),
             Object::Nil => write!(f, "nil"),
             Object::Unitialized => write!(f, "unitialized"),
             Object::Return(object) => write!(f, "return {}", object),
-            Object::Function{params, body, name} => {
+            Object::Function{params, body, name, ..} => {
                 write!(f, "fn {}({:?}) {:?}", name.lexeme, csv_str(params), body)
             }
             Object::Builtin(name, _) => write!(f, "{}", name),
@@ -76,7 +78,7 @@ impl Display for Object {
     
 }
 
-impl ObjectCaller<Object> for Object{
+impl ObjectCaller<BObject> for Object{
     fn is_callable(&self) -> bool{
         match self {
             Object::Function{..} => true,
@@ -84,10 +86,10 @@ impl ObjectCaller<Object> for Object{
             _ => false
         }
     }
-    fn call(&mut self, interpreter: &mut Interpreter, arguments: Vec<Object>) -> Object {
-        match self {
-            Object::Function{body, name, params} => {
-                let mut env = Environment::new_enclosing(interpreter.globals.clone());
+    fn call(&mut self, interpreter: &mut Interpreter, arguments: Box<[BObject]>) -> BObject {
+        match &self {
+            Object::Function{body, name, params, environment} => {
+                let mut env = Environment::new_enclosing(environment.clone());
 
                 let mut i = 0;
                 while i < params.len() {
@@ -96,10 +98,10 @@ impl ObjectCaller<Object> for Object{
                 }
 
                 interpreter.execute_block(body, Rc::new(RefCell::new(env)));
-                Object::Nil
+                Return::get()
             },
             Object::Builtin(_, func) => func(arguments),
-            _ => Object::Nil
+            _ => Box::new(Object::Nil)
         }
     }
     
@@ -113,6 +115,6 @@ impl ObjectCaller<Object> for Object{
 
 pub trait ObjectCaller<R> {
     fn is_callable(&self) -> bool;
-    fn call(&mut self, interpreter: &mut Interpreter, arguments: Vec<Object>) -> R;
+    fn call(&mut self, interpreter: &mut Interpreter, arguments: Box<[BObject]>) -> R;
     fn arity(&self) -> usize;
 }

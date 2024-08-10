@@ -1,13 +1,13 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub type MutEnv = Rc<RefCell<Environment>>;
-use crate::{error::ErrorHandler, environment::{BuiltinSignature, Object}, token::{Token, TokenType}};
+use crate::{environment::{BuiltinSignature, Object}, error::ErrorHandler, token::{Token, TokenType}};
 
-use super::builtin::clock;
+use super::{builtin::clock, BObject};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Environment{
-    pub values: HashMap<String, Object>,
+    pub values: HashMap<String, BObject>,
     enclosing: Option<MutEnv>,
 }
 
@@ -19,7 +19,7 @@ impl Environment {
     fn define_builtin(&mut self, identificator: &'static str, signature: BuiltinSignature){
         self.define(
             &Token::with_lexeme(identificator.to_owned(), TokenType::Identifier), 
-            Object::Builtin(identificator.to_owned(), signature)
+            Box::new(Object::Builtin(identificator.to_owned(), signature))
         )
     }
 
@@ -39,7 +39,7 @@ impl Environment {
             enclosing: Some(enclosing)}
     }
 
-    pub fn define(&mut self, name: &Token, value: Object) {
+    pub fn define(&mut self, name: &Token, value: BObject) {
         let lexeme = name.lexeme.to_owned();
 
         if self.values.contains_key(&lexeme){
@@ -49,7 +49,7 @@ impl Environment {
         self.values.insert(lexeme.clone(), value);
     }
 
-    pub fn assign(&mut self, name: &Token, value: Object) {
+    pub fn assign(&mut self, name: &Token, value: BObject) {
         let lexeme = name.lexeme.to_owned();
 
         if self.values.contains_key(&lexeme){
@@ -67,7 +67,7 @@ impl Environment {
         }
     }
 
-    pub fn get(&self, name: Token) -> Object {
+    pub fn get(&self, name: Token) -> BObject {
         let key = name.lexeme.to_owned();
 
         if self.values.contains_key(&key){
@@ -75,7 +75,7 @@ impl Environment {
 
             if value.is_equal(Object::Unitialized){
                 ErrorHandler::runtime_error(&name, format!("Variable '{}' has not been initialized or assigned to.", key));
-                return Object::Unitialized
+                return Box::new(Object::Unitialized)
             }
 
             return value.to_owned();
@@ -87,7 +87,7 @@ impl Environment {
             },
             None => {
                 ErrorHandler::runtime_error(&name, format!("Undefined variable '{}'.", key));
-                Object::Nil
+                Box::new(Object::Nil)
             },
         };
         return value;
