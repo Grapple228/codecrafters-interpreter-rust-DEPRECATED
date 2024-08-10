@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-use crate::object::Object;
+use crate::environment::Object;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
@@ -85,6 +85,15 @@ pub struct Token {
 }
 
 impl Token {
+    pub fn with_lexeme(lexeme: String, token_type: TokenType) -> Token {
+        Token {
+            line: 0,
+            lexeme,
+            token_type,
+            literal: Object::Nil
+        }
+    }
+
     pub fn eof(line: usize) -> Token {
         Token{
             token_type: TokenType::Eof,

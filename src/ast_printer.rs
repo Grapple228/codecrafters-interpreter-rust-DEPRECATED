@@ -1,4 +1,4 @@
-use crate::{expression::{Expr, ExprVisitor}, object::Object};
+use crate::{environment::Object, expression::{Expr, ExprVisitor}};
 pub struct AstPrinter{}
 
 impl AstPrinter {

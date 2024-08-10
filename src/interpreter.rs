@@ -1,16 +1,22 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{environment::{Environment, MutEnv}, error::ErrorHandler, expression::{Expr, ExprVisitor}, object::Object, statement::{Stmt, StmtVisitor}, token::{Token, TokenType}};
+use crate::{environment::environment::{Environment, MutEnv}, error::ErrorHandler, expression::{Expr, ExprVisitor}, environment::{Object, ObjectCaller}, statement::{Stmt, StmtVisitor}, token::{Token, TokenType}};
 
 pub struct Interpreter{
-    environment: MutEnv
+    environment: MutEnv,
+    pub globals: MutEnv
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self { environment: Rc::new(RefCell::new(Environment::new())) }
+        let environment = Rc::new(RefCell::new(Environment::new()));
+
+        Self{
+            environment: environment.to_owned(),
+            globals: environment.clone()
+        }
     }
-    
+
     pub fn evaluate_expr(&mut self, expr: &Box<Expr>) -> Object {
         expr.accept(self)
     }
@@ -19,13 +25,13 @@ impl Interpreter {
         stmt.accept(self)
     }
 
-    fn runtime_error(operator: &Token, message: &'static str) -> Object{
+    fn runtime_error(operator: &Token, message: String) -> Object{
         ErrorHandler::runtime_error(operator, String::from(message));
         Object::Nil
     }
 
-    fn execute_block(&mut self, statements: &Vec<Box<Stmt>>, environment: MutEnv){
-        let previous = self.environment.clone();
+    pub fn execute_block(&mut self, statements: &Vec<Box<Stmt>>, environment: MutEnv){
+        let previous = self.environment.to_owned();
 
         self.environment = environment;
 
@@ -73,7 +79,15 @@ impl StmtVisitor<()> for Interpreter {
                         None => (),
                     }
                 }
-            }
+            },
+            Stmt::Function { name, params, body } => {
+                let function = Object::Function{
+                    body: body.to_owned(),
+                    name: Box::new(name.to_owned()),
+                    params: params.to_owned() 
+                };
+                self.environment.borrow_mut().define(name, function)
+            },
             _ => panic!("Statement not defined!")
         }
     }
@@ -84,18 +98,37 @@ impl ExprVisitor<Object> for Interpreter {
         match expr {
             Expr::Assign { name, value } => {
                 let value = self.evaluate_expr(value);
-                self.environment.borrow_mut().assign(name, value.clone());
+                self.environment.borrow_mut().assign(name, value.to_owned());
                 return value;
+            },
+            Expr::Call { callee, paren, arguments } => {
+                let mut callee = self.evaluate_expr(callee);
+
+                let mut args = vec![];
+
+                for arg in arguments{
+                    args.push(self.evaluate_expr(arg));
+                }
+
+                if !callee.is_callable(){
+                    return Interpreter::runtime_error(paren, "Can only call functions and classes.".to_string());
+                }
+
+                if args.len() != callee.arity(){
+                    return Interpreter::runtime_error(paren, format!("Expected {} arguments, but got {}.", callee.arity(), args.len()));
+                }
+
+                callee.call(self, args)
             },
             Expr::Logical { left, operator, right } => {
                 let left = self.evaluate_expr(left);
 
                 if operator.token_type == TokenType::Or{
-                    if left.clone().is_thuthy() {
+                    if left.to_owned().is_thuthy() {
                         return left;
                     }
                 } else {
-                    if !left.clone().is_thuthy(){
+                    if !left.to_owned().is_thuthy(){
                         return left;
                     }
                 }
@@ -103,9 +136,9 @@ impl ExprVisitor<Object> for Interpreter {
                 self.evaluate_expr(right)
             },
             Expr::Variable { name } => {
-                self.environment.borrow_mut().get(name.clone())
+                self.environment.borrow_mut().get(name.to_owned())
             },
-            Expr::Literal { value } => value.clone(),
+            Expr::Literal { value } => value.to_owned(),
             Expr::Grouping { expression } => self.evaluate_expr(expression),
             Expr::Unary { operator, right } => {
                 let right = self.evaluate_expr(right);
@@ -116,7 +149,7 @@ impl ExprVisitor<Object> for Interpreter {
                     },
                     TokenType::Minus => match right{
                         Object::Number(num) => Object::Number(-num),
-                        _ => Interpreter::runtime_error(operator, "Operand must be a number."),
+                        _ => Interpreter::runtime_error(operator, "Operand must be a number.".to_string()),
                     } ,
                     _ => Object::Nil
                 }
@@ -129,7 +162,7 @@ impl ExprVisitor<Object> for Interpreter {
                     (Object::String(str1), Object::String(str2)) => {
                         match operator.token_type{
                             TokenType::Plus => Object::String(str1 + &str2),
-                            TokenType::Slash | TokenType::Star | TokenType::Minus => Interpreter::runtime_error(operator, "Operands must be numbers."),
+                            TokenType::Slash | TokenType::Star | TokenType::Minus => Interpreter::runtime_error(operator, "Operands must be numbers.".to_string()),
                             TokenType::BangEqual => Object::Boolean(str1 != str2),
                             TokenType::EqualEqual => Object::Boolean(str1 == str2),
                             _ => Object::Nil
@@ -153,8 +186,8 @@ impl ExprVisitor<Object> for Interpreter {
                     (val1, val2) => {
                         match operator.token_type {
                             TokenType::Greater | TokenType::GreaterEqual | TokenType::Less | TokenType::LessEqual |
-                            TokenType::Slash | TokenType::Star | TokenType::Minus => Interpreter::runtime_error(operator, "Operands must be numbers."),
-                            TokenType::Plus => Interpreter::runtime_error(operator, "Operands must be two numbers or two strings."),
+                            TokenType::Slash | TokenType::Star | TokenType::Minus => Interpreter::runtime_error(operator, "Operands must be numbers.".to_string()),
+                            TokenType::Plus => Interpreter::runtime_error(operator, "Operands must be two numbers or two strings.".to_string()),
                             TokenType::BangEqual => Object::Boolean(!val1.is_equal(val2)),
                             TokenType::EqualEqual => Object::Boolean(val1.is_equal(val2)),
                             _ => Object::Nil

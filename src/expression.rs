@@ -1,14 +1,11 @@
 use std::fmt::Display;
 
-use crate::{error::ParserError, token::Token, object::Object};
+use crate::{error::ParserError, token::Token, environment::Object};
 
 pub type MyResult<T> = std::result::Result<Box<T>, ParserError>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    Number(f64),
-    Boolean(bool),
-    String(String),
     Assign{
         name: Token,
         value: Box<Expr>

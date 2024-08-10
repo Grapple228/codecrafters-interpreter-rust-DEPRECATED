@@ -1,4 +1,4 @@
-use crate::{char_extensions::CharExtensions, error::ErrorHandler, object::Object, string_extensions::StringExtensions, token::{Token, TokenType}};
+use crate::{char_extensions::CharExtensions, environment::Object, error::ErrorHandler, string_extensions::StringExtensions, token::{Token, TokenType}};
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
