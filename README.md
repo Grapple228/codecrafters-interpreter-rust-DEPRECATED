@@ -1,3 +1,8 @@
+# IMPORTANT
+
+This version is deprecated, newest version: [here](https://github.com/Grapple228/codecrafters-interpreter-rust-v2)
+
+# About
 [![progress-banner](https://backend.codecrafters.io/progress/interpreter/4e0a6f2e-93dc-4ae1-a487-3930e14470af)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
 
 This is a starting point for Rust solutions to the
